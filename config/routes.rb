@@ -560,42 +560,7 @@ Rails.application.routes.draw do
   require 'sidekiq/web'
   require 'sidekiq/cron/web'
 
-  devise_for :super_admins, path: 'super_admin', controllers: { sessions: 'super_admin/devise/sessions' }
-  devise_scope :super_admin do
-    get 'super_admin/logout', to: 'super_admin/devise/sessions#destroy'
-    namespace :super_admin do
-      root to: 'dashboard#index'
-
-      resource :app_config, only: [:show, :create]
-
-      # order of resources affect the order of sidebar navigation in super admin
-      resources :accounts, only: [:index, :new, :create, :show, :edit, :update, :destroy] do
-        post :seed, on: :member
-        post :reset_cache, on: :member
-      end
-      resources :users, only: [:index, :new, :create, :show, :edit, :update, :destroy] do
-        delete :avatar, on: :member, action: :destroy_avatar
-      end
-
-      resources :access_tokens, only: [:index, :show]
-      resources :installation_configs, only: [:index, :new, :create, :show, :edit, :update]
-      resources :agent_bots, only: [:index, :new, :create, :show, :edit, :update, :destroy] do
-        delete :avatar, on: :member, action: :destroy_avatar
-      end
-      resources :platform_apps, only: [:index, :new, :create, :show, :edit, :update, :destroy]
-      resource :instance_status, only: [:show]
-
-      resource :settings, only: [:show] do
-        get :refresh, on: :collection
-      end
-
-      # resources that doesn't appear in primary navigation in super admin
-      resources :account_users, only: [:new, :create, :show, :destroy]
-    end
-    authenticated :super_admin do
-      mount Sidekiq::Web => '/monitoring/sidekiq'
-    end
-  end
+  # super_admin routes removed — SuperAdmin module stripped
 
   namespace :installation do
     get 'onboarding', to: 'onboarding#index'

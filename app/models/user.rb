@@ -52,7 +52,6 @@ class User < ApplicationRecord
   include DeviseTokenAuth::Concerns::User
   include Pubsubable
   include Rails.application.routes.url_helpers
-  include Reportable
   include SsoAuthenticatable
   include UserAttributeHelpers
 
