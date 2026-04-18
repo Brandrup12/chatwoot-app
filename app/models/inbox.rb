@@ -72,8 +72,6 @@ class Inbox < ApplicationRecord
 
   enum sender_name_type: { friendly: 0, professional: 1 }
 
-  after_destroy :delete_round_robin_agents
-
   after_create_commit :dispatch_create_event
   after_update_commit :dispatch_update_event
 
@@ -230,10 +228,6 @@ class Inbox < ApplicationRecord
 
   def ensure_valid_max_assignment_limit
     # overridden in enterprise/app/models/enterprise/inbox.rb
-  end
-
-  def delete_round_robin_agents
-    ::AutoAssignment::InboxRoundRobinService.new(inbox: self).clear_queue
   end
 
   def check_channel_type?

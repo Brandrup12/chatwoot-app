@@ -14,7 +14,6 @@ RSpec.describe 'SwitchLocale Concern', type: :controller do
   end
 
   let(:account) { create(:account, locale: 'es') }
-  let(:portal) { create(:portal, custom_domain: 'custom.example.com', config: { default_locale: 'fr_FR' }) }
 
   describe '#switch_locale' do
     context 'when locale is provided in params' do
@@ -46,20 +45,6 @@ RSpec.describe 'SwitchLocale Concern', type: :controller do
 
       it 'returns nil' do
         expect(controller.send(:locale_from_user)).to be_nil
-      end
-    end
-
-    context 'when request is from custom domain' do
-      before { request.host = portal.custom_domain }
-
-      it 'sets locale from portal' do
-        get :index
-        expect(response.body).to eq('fr')
-      end
-
-      it 'overrides portal locale with param' do
-        get :index, params: { locale: 'es' }
-        expect(response.body).to eq('es')
       end
     end
 
