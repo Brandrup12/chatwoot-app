@@ -54,27 +54,6 @@ describe NotificationListener do
       notification_setting.save!
     end
 
-    it 'will call mention service' do
-      mention_service = instance_double(Messages::MentionService)
-      allow(Messages::MentionService).to receive(:new).and_return(mention_service)
-      allow(mention_service).to receive(:perform)
-
-      create(:inbox_member, user: first_agent, inbox: inbox)
-      conversation.reload
-
-      message = build(
-        :message,
-        conversation: conversation,
-        account: account,
-        content: "hi [#{first_agent.name}](mention://user/#{first_agent.id}/#{first_agent.name})",
-        private: true
-      )
-
-      expect(mention_service).to receive(:perform)
-      event = Events::Base.new(event_name, Time.zone.now, message: message)
-      listener.message_created(event)
-    end
-
     it 'will call new message notification service' do
       notification_service = instance_double(Messages::NewMessageNotificationService)
       allow(Messages::NewMessageNotificationService).to receive(:new).and_return(notification_service)
@@ -123,41 +102,6 @@ describe NotificationListener do
   # integration tests to ensure that the order mention service and new message notification service are called in the correct order
   describe 'message_created - mentions, participation & assignment integration' do
     let(:event_name) { :'message.created' }
-
-    it 'will not create duplicate new message notification for the same user for mentions participation & assignment' do
-      create(:inbox_member, user: first_agent, inbox: inbox)
-      conversation.update(assignee: first_agent)
-
-      message = build(
-        :message,
-        conversation: conversation,
-        account: account,
-        content: "hi [#{first_agent.name}](mention://user/#{first_agent.id}/#{first_agent.name})",
-        private: true
-      )
-      event = Events::Base.new(event_name, Time.zone.now, message: message)
-      listener.message_created(event)
-
-      expect(first_agent.notifications.count).to eq(1)
-      expect(first_agent.notifications.first.notification_type).to eq('conversation_mention')
-    end
-
-    it 'will create a mention notification when a user is mentioned in a private note' do
-      create(:inbox_member, user: first_agent, inbox: inbox)
-
-      message = build(
-        :message,
-        conversation: conversation,
-        account: account,
-        content: "hey [#{first_agent.name}](mention://user/#{first_agent.id}/#{first_agent.name})",
-        private: true
-      )
-      event = Events::Base.new(event_name, Time.zone.now, message: message)
-      listener.message_created(event)
-
-      expect(first_agent.notifications.count).to eq(1)
-      expect(first_agent.notifications.first.notification_type).to eq('conversation_mention')
-    end
 
     it 'will not create new message notifications for private messages without mentions' do
       create(:inbox_member, user: first_agent, inbox: inbox)

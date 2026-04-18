@@ -12,7 +12,6 @@ class AsyncDispatcher < BaseDispatcher
     [
       AutomationRuleListener.instance,
       CsatSurveyListener.instance,
-      HookListener.instance,
       InstallationWebhookListener.instance,
       NotificationListener.instance,
       ParticipationListener.instance,
