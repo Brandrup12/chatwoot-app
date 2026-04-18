@@ -22,8 +22,6 @@ gem 'time_diff'
 gem 'tzinfo-data'
 gem 'valid_email2'
 gem 'email-provider-info'
-# compress javascript config.assets.js_compressor
-gem 'uglifier'
 ##-- used for single column multiple binary flags in notification settings/feature flagging --##
 gem 'flag_shih_tzu'
 # Random name generator for user names
@@ -90,29 +88,14 @@ gem 'devise-two-factor', '>= 5.0.0'
 gem 'jwt'
 gem 'pundit'
 
-# super admin
-gem 'administrate', '>= 0.20.1'
-gem 'administrate-field-active_storage', '>= 1.0.3'
-gem 'administrate-field-belongs_to_search', '>= 0.9.0'
-
 ##--- gems for pubsub service ---##
 # https://karolgalanciak.com/blog/2019/11/30/from-activerecord-callbacks-to-publish-slash-subscribe-pattern-and-event-driven-design/
 gem 'wisper', '2.0.0'
 
 ##--- gems for channels ---##
 gem 'facebook-messenger'
-gem 'line-bot-api'
-gem 'twilio-ruby'
-# twitty will handle subscription of twitter account events
-# gem 'twitty', git: 'https://github.com/chatwoot/twitty'
-gem 'twitty', '~> 0.1.5'
 # facebook client
 gem 'koala'
-# slack client
-gem 'slack-ruby-client', '~> 2.7.0'
-# for dialogflow integrations
-gem 'google-cloud-dialogflow-v2', '>= 0.24.0'
-gem 'grpc'
 # Translate integrations
 # 'google-cloud-translate' gem depends on faraday 2.0 version
 # this dependency breaks the slack-ruby-client gem
@@ -156,12 +139,6 @@ gem 'procore-sift'
 gem 'email_reply_trimmer'
 
 gem 'html2text'
-
-# to calculate working hours
-gem 'working_hours'
-
-# full text search for articles
-gem 'pg_search'
 
 # Subscriptions, Billing
 gem 'stripe', '~> 18.0'

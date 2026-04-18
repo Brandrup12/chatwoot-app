@@ -16,7 +16,6 @@ Rails.application.routes.draw do
   namespace :survey do
     resources :responses, only: [:show]
   end
-  resource :slack_uploads, only: [:show]
 
   get '/health', to: 'health#show'
   get '/api', to: 'api#index'
@@ -64,19 +63,6 @@ Rails.application.routes.draw do
           resources :macros, only: [:index, :create, :show, :update, :destroy] do
             post :execute, on: :member
           end
-          resources :sla_policies, only: [:index, :create, :show, :update, :destroy]
-          resources :custom_roles, only: [:index, :create, :show, :update, :destroy]
-          resources :agent_capacity_policies, only: [:index, :create, :show, :update, :destroy] do
-            scope module: :agent_capacity_policies do
-              resources :users, only: [:index, :create, :destroy]
-              resources :inbox_limits, only: [:create, :update, :destroy]
-            end
-          end
-          resources :campaigns, only: [:index, :create, :show, :update, :destroy]
-          resources :dashboard_apps, only: [:index, :show, :create, :update, :destroy]
-          namespace :channels do
-            resource :twilio_channel, only: [:create]
-          end
           resources :conversations, only: [:index, :create, :show, :update, :destroy] do
             collection do
               get :meta
@@ -107,7 +93,6 @@ Rails.application.routes.draw do
               post :unread
               post :custom_attributes
               get :attachments
-              get :reporting_events if ChatwootApp.enterprise?
             end
           end
 
@@ -116,7 +101,6 @@ Rails.application.routes.draw do
               get :conversations
               get :messages
               get :contacts
-              get :articles
             end
           end
 
@@ -143,7 +127,6 @@ Rails.application.routes.draw do
               resources :contact_inboxes, only: [:create]
               resources :labels, only: [:create, :index]
               resources :notes
-              post :call, on: :member, to: 'calls#create' if ChatwootApp.enterprise?
             end
           end
           resources :csat_survey_responses, only: [:index] do
@@ -151,22 +134,11 @@ Rails.application.routes.draw do
               get :metrics
               get :download
             end
-            member do
-              patch :update if ChatwootApp.enterprise?
-            end
           end
-          resources :applied_slas, only: [:index] do
-            collection do
-              get :metrics
-              get :download
-            end
-          end
-          resources :reporting_events, only: [:index] if ChatwootApp.enterprise?
           resources :custom_attribute_definitions, only: [:index, :show, :create, :update, :destroy]
           resources :custom_filters, only: [:index, :show, :create, :update, :destroy]
           resources :inboxes, only: [:index, :show, :create, :update, :destroy] do
             get :assignable_agents, on: :member
-            get :campaigns, on: :member
             get :agent_bot, on: :member
             post :set_agent_bot, on: :member
             delete :avatar, on: :member
@@ -174,11 +146,6 @@ Rails.application.routes.draw do
             get :health, on: :member
             post :register_webhook, on: :member
             post :reset_secret, on: :member
-            if ChatwootApp.enterprise?
-              resource :conference, only: %i[create destroy], controller: 'conference' do
-                get :token, on: :member
-              end
-            end
 
             resource :csat_template, only: [:show, :create], controller: 'inbox_csat_templates'
           end
@@ -204,28 +171,6 @@ Rails.application.routes.draw do
           end
           resource :notification_settings, only: [:show, :update]
 
-          resources :teams do
-            resources :team_members, only: [:index, :create] do
-              collection do
-                delete :destroy
-                patch :update
-              end
-            end
-          end
-
-          # Assignment V2 Routes
-          resources :assignment_policies do
-            resources :inboxes, only: [:index, :create, :destroy], module: :assignment_policies
-          end
-
-          resources :inboxes, only: [] do
-            resource :assignment_policy, only: [:show, :create, :destroy], module: :inboxes
-          end
-
-          namespace :twitter do
-            resource :authorization, only: [:create]
-          end
-
           namespace :microsoft do
             resource :authorization, only: [:create]
           end
@@ -235,14 +180,6 @@ Rails.application.routes.draw do
           end
 
           namespace :instagram do
-            resource :authorization, only: [:create]
-          end
-
-          namespace :tiktok do
-            resource :authorization, only: [:create]
-          end
-
-          namespace :notion do
             resource :authorization, only: [:create]
           end
 
@@ -258,55 +195,11 @@ Rails.application.routes.draw do
                 post :process_event
               end
             end
-            resource :slack, only: [:create, :update, :destroy], controller: 'slack' do
-              member do
-                get :list_all_channels
-              end
-            end
-            resource :dyte, controller: 'dyte', only: [] do
-              collection do
-                post :create_a_meeting
-                post :add_participant_to_meeting
-              end
-            end
             resource :shopify, controller: 'shopify', only: [:destroy] do
               collection do
                 post :auth
                 get :orders
               end
-            end
-            resource :linear, controller: 'linear', only: [] do
-              collection do
-                delete :destroy
-                get :teams
-                get :team_entities
-                post :create_issue
-                post :link_issue
-                post :unlink_issue
-                get :search_issue
-                get :linked_issues
-              end
-            end
-            resource :notion, controller: 'notion', only: [] do
-              collection do
-                delete :destroy
-              end
-            end
-          end
-          resources :working_hours, only: [:update]
-
-          resources :portals do
-            member do
-              patch :archive
-              delete :logo
-              post :send_instructions
-              get :ssl_status
-            end
-            resources :categories do
-              post :reorder, on: :collection
-            end
-            resources :articles do
-              post :reorder, on: :collection
             end
           end
 
@@ -344,7 +237,6 @@ Rails.application.routes.draw do
       namespace :widget do
         resource :direct_uploads, only: [:create]
         resource :config, only: [:create]
-        resources :campaigns, only: [:index]
         resources :events, only: [:create]
         resources :messages, only: [:index, :create, :update]
         resources :conversations, only: [:index, :create] do
@@ -365,53 +257,6 @@ Rails.application.routes.draw do
         end
         resources :inbox_members, only: [:index]
         resources :labels, only: [:create, :destroy]
-        namespace :integrations do
-          resource :dyte, controller: 'dyte', only: [] do
-            collection do
-              post :add_participant_to_meeting
-            end
-          end
-        end
-      end
-    end
-
-    namespace :v2 do
-      resources :accounts, only: [:create] do
-        scope module: :accounts do
-          resources :summary_reports, only: [] do
-            collection do
-              get :agent
-              get :team
-              get :inbox
-              get :label
-              get :channel
-            end
-          end
-          resources :reports, only: [:index] do
-            collection do
-              get :summary
-              get :bot_summary
-              get :agents
-              get :inboxes
-              get :labels
-              get :teams
-              get :conversations
-              get :conversations_summary
-              get :conversation_traffic
-              get :bot_metrics
-              get :inbox_label_matrix
-              get :first_response_time_distribution
-              get :outgoing_messages_count
-            end
-          end
-          resource :year_in_review, only: [:show]
-          resources :live_reports, only: [] do
-            collection do
-              get :conversation_metrics
-              get :grouped_conversation_metrics
-            end
-          end
-        end
       end
     end
   end
@@ -487,16 +332,6 @@ Rails.application.routes.draw do
     end
   end
 
-  get 'hc/:slug', to: 'public/api/v1/portals#show'
-  get 'hc/:slug/sitemap.xml', to: 'public/api/v1/portals#sitemap'
-  get 'hc/:slug/:locale', to: 'public/api/v1/portals#show'
-  get 'hc/:slug/:locale/articles', to: 'public/api/v1/portals/articles#index'
-  get 'hc/:slug/:locale/categories', to: 'public/api/v1/portals/categories#index'
-  get 'hc/:slug/:locale/categories/:category_slug', to: 'public/api/v1/portals/categories#show'
-  get 'hc/:slug/:locale/categories/:category_slug/articles', to: 'public/api/v1/portals/articles#index'
-  get 'hc/:slug/articles/:article_slug.png', to: 'public/api/v1/portals/articles#tracking_pixel'
-  get 'hc/:slug/articles/:article_slug', to: 'public/api/v1/portals/articles#show'
-
   # ----------------------------------------------------------------------
   # Used in mailer templates
   resource :app, only: [:index] do
@@ -508,59 +343,28 @@ Rails.application.routes.draw do
   # ----------------------------------------------------------------------
   # Routes for channel integrations
   mount Facebook::Messenger::Server, at: 'bot'
-  get 'webhooks/twitter', to: 'api/v1/webhooks#twitter_crc'
-  post 'webhooks/twitter', to: 'api/v1/webhooks#twitter_events'
-  post 'webhooks/line/:line_channel_id', to: 'webhooks/line#process_payload'
-  post 'webhooks/telegram/:bot_token', to: 'webhooks/telegram#process_payload'
-  post 'webhooks/sms/:phone_number', to: 'webhooks/sms#process_payload'
   get 'webhooks/whatsapp/:phone_number', to: 'webhooks/whatsapp#verify'
   post 'webhooks/whatsapp/:phone_number', to: 'webhooks/whatsapp#process_payload'
   get 'webhooks/instagram', to: 'webhooks/instagram#verify'
   post 'webhooks/instagram', to: 'webhooks/instagram#events'
-  post 'webhooks/tiktok', to: 'webhooks/tiktok#events'
   post 'webhooks/shopify', to: 'webhooks/shopify#events'
-
-  namespace :twitter do
-    resource :callback, only: [:show]
-  end
-
-  namespace :linear do
-    resource :callback, only: [:show]
-  end
 
   namespace :shopify do
     resource :callback, only: [:show]
   end
 
-  namespace :twilio do
-    resources :callback, only: [:create]
-    resources :delivery_status, only: [:create]
-
-    if ChatwootApp.enterprise?
-      post 'voice/call/:phone', to: 'voice#call_twiml', as: :voice_call
-      post 'voice/status/:phone', to: 'voice#status', as: :voice_status
-      post 'voice/conference_status/:phone', to: 'voice#conference_status', as: :voice_conference_status
-    end
-  end
-
   get 'microsoft/callback', to: 'microsoft/callbacks#show'
   get 'google/callback', to: 'google/callbacks#show'
   get 'instagram/callback', to: 'instagram/callbacks#show'
-  get 'tiktok/callback', to: 'tiktok/callbacks#show'
-  get 'notion/callback', to: 'notion/callbacks#show'
+
   # ----------------------------------------------------------------------
   # Routes for external service verifications
-  get '.well-known/assetlinks.json' => 'android_app#assetlinks'
-  get '.well-known/apple-app-site-association' => 'apple_app#site_association'
   get '.well-known/microsoft-identity-association.json' => 'microsoft#identity_association'
-  get '.well-known/cf-custom-hostname-challenge/:id', to: 'custom_domains#verify'
 
   # ----------------------------------------------------------------------
   # Internal Monitoring Routes
   require 'sidekiq/web'
   require 'sidekiq/cron/web'
-
-  # super_admin routes removed — SuperAdmin module stripped
 
   namespace :installation do
     get 'onboarding', to: 'onboarding#index'
