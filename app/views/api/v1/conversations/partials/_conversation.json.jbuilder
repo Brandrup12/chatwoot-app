@@ -18,11 +18,6 @@ json.meta do
     end
     json.assignee_type 'User'
   end
-  if conversation.team.present?
-    json.team do
-      json.partial! 'api/v1/models/team', formats: [:json], resource: conversation.team
-    end
-  end
   json.hmac_verified conversation.contact_inbox&.hmac_verified
 end
 

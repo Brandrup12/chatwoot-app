@@ -29,9 +29,9 @@ class Instagram::CallbacksController < ApplicationController
     inbox, already_exists = find_or_create_inbox
 
     if already_exists
-      redirect_to app_instagram_inbox_settings_url(account_id: account_id, inbox_id: inbox.id)
+      redirect_to "/app/accounts/#{account_id}/settings/inboxes/#{inbox.id}"
     else
-      redirect_to app_instagram_inbox_agents_url(account_id: account_id, inbox_id: inbox.id)
+      redirect_to "/app/accounts/#{account_id}/settings/inboxes/#{inbox.id}/agents"
     end
   end
 
@@ -79,12 +79,12 @@ class Instagram::CallbacksController < ApplicationController
   # This ensures consistent error handling across different error scenarios
   # Frontend will handle the error page based on the error_type
   def redirect_to_error_page(error_info)
-    redirect_to app_new_instagram_inbox_url(
-      account_id: account_id,
+    query = {
       error_type: error_info['error_type'],
       code: error_info['code'],
       error_message: error_info['error_message']
-    )
+    }.to_query
+    redirect_to "/app/accounts/#{account_id}/settings/inboxes/new/instagram?#{query}"
   end
 
   def find_or_create_inbox
