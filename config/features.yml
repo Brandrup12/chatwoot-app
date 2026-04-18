@@ -39,9 +39,6 @@
   display_name: Agent Bots
   enabled: true
   help_url: https://chwt.app/hc/agent-bots
-- name: macros
-  display_name: Macros
-  enabled: true
 - name: agent_management
   display_name: Agent Management
   enabled: true
@@ -60,13 +57,6 @@
   display_name: Custom Attributes
   enabled: true
   help_url: https://chwt.app/hc/custom-attributes
-- name: automations
-  display_name: Automations
-  enabled: true
-- name: canned_responses
-  display_name: Canned Responses
-  enabled: true
-  help_url: https://chwt.app/hc/canned
 - name: integrations
   display_name: Integrations
   enabled: true

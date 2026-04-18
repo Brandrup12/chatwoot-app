@@ -13,7 +13,6 @@ class Messages::MessageBuilder
     @account = conversation.account
     @message_type = params[:message_type] || 'outgoing'
     @attachments = params[:attachments]
-    @automation_rule = content_attributes&.dig(:automation_rule_id)
     return unless params.instance_of?(ActionController::Parameters)
 
     @in_reply_to = content_attributes&.dig(:in_reply_to)
@@ -111,10 +110,6 @@ class Messages::MessageBuilder
     @params[:external_created_at].present? ? { external_created_at: @params[:external_created_at] } : {}
   end
 
-  def automation_rule_id
-    @automation_rule.present? ? { content_attributes: { automation_rule_id: @automation_rule } } : {}
-  end
-
   def campaign_id
     @params[:campaign_id].present? ? { additional_attributes: { campaign_id: @params[:campaign_id] } } : {}
   end
@@ -143,7 +138,7 @@ class Messages::MessageBuilder
       in_reply_to: @in_reply_to,
       echo_id: @params[:echo_id],
       source_id: @params[:source_id]
-    }.merge(external_created_at).merge(automation_rule_id).merge(campaign_id).merge(template_params)
+    }.merge(external_created_at).merge(campaign_id).merge(template_params)
   end
 
   def email_inbox?

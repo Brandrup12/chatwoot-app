@@ -48,7 +48,7 @@ module ActivityMessageHandler
 
   def status_change_activity(user_name)
     content = if Current.executed_by.present?
-                automation_status_change_activity_content
+                contact_auto_open_activity_content
               else
                 user_status_change_activity_content(user_name)
               end
@@ -77,13 +77,11 @@ module ActivityMessageHandler
     end
   end
 
-  def automation_status_change_activity_content
-    if Current.executed_by.instance_of?(AutomationRule)
-      I18n.t("conversations.activity.status.#{status}", user_name: I18n.t('automation.system_name'))
-    elsif Current.executed_by.instance_of?(Contact)
-      Current.executed_by = nil
-      I18n.t('conversations.activity.status.system_auto_open')
-    end
+  def contact_auto_open_activity_content
+    return unless Current.executed_by.instance_of?(Contact)
+
+    Current.executed_by = nil
+    I18n.t('conversations.activity.status.system_auto_open')
   end
 
   def activity_message_params(content)

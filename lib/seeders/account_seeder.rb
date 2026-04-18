@@ -22,7 +22,6 @@ class Seeders::AccountSeeder
     seed_custom_roles
     set_up_users
     seed_labels
-    seed_canned_responses
     seed_inboxes
     seed_contacts
   end
@@ -101,12 +100,6 @@ class Seeders::AccountSeeder
     return nil unless @account.respond_to?(:custom_roles)
 
     @account.custom_roles.find_by(name: role_name)
-  end
-
-  def seed_canned_responses(count: 50)
-    count.times do
-      @account.canned_responses.create(content: Faker::Quote.fortune_cookie, short_code: Faker::Alphanumeric.alpha(number: 10))
-    end
   end
 
   def seed_contacts

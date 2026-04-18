@@ -3,7 +3,6 @@ class Messages::SearchDataPresenter < SimpleDelegator
     {
       **searchable_content,
       **message_attributes,
-      additional_attributes: additional_attributes_data,
       conversation: conversation_data
     }
   end
@@ -47,11 +46,5 @@ class Messages::SearchDataPresenter < SimpleDelegator
 
   def conversation_data
     { id: conversation.display_id }
-  end
-
-  def additional_attributes_data
-    {
-      automation_rule_id: content_attributes&.dig('automation_rule_id')
-    }
   end
 end

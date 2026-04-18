@@ -56,13 +56,6 @@ Rails.application.routes.draw do
               post :reauthorize_page
             end
           end
-          resources :canned_responses, only: [:index, :create, :update, :destroy]
-          resources :automation_rules, only: [:index, :create, :show, :update, :destroy] do
-            post :clone
-          end
-          resources :macros, only: [:index, :create, :show, :update, :destroy] do
-            post :execute, on: :member
-          end
           resources :conversations, only: [:index, :create, :show, :update, :destroy] do
             collection do
               get :meta

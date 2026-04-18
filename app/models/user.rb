@@ -106,13 +106,8 @@ class User < ApplicationRecord
   has_many :notification_settings, dependent: :destroy_async
   has_many :notification_subscriptions, dependent: :destroy_async
   has_many :notifications, dependent: :destroy_async
-  # rubocop:disable Rails/HasManyOrHasOneDependent
-  # we are handling this in `remove_macros` callback
-  has_many :macros, foreign_key: 'created_by_id', inverse_of: :created_by
-  # rubocop:enable Rails/HasManyOrHasOneDependent
 
   before_validation :set_password_and_uid, on: :create
-  after_destroy :remove_macros
 
   scope :order_by_full_name, -> { order('lower(name) ASC') }
 
@@ -207,11 +202,6 @@ class User < ApplicationRecord
     super
   end
 
-  private
-
-  def remove_macros
-    macros.personal.destroy_all
-  end
 end
 
 User.include_mod_with('Concerns::User')
