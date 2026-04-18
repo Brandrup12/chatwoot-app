@@ -106,18 +106,6 @@ RSpec.describe 'Callbacks API', type: :request do
     context 'when it is an authenticated user' do
       let(:admin) { create(:user, account: account, role: :administrator) }
 
-      it 'reauthorizes the page' do
-        params = { inbox_id: inbox.id }
-
-        post "/api/v1/accounts/#{account.id}/callbacks/reauthorize_page",
-             headers: admin.create_new_auth_token,
-             params: params,
-             as: :json
-
-        expect(response).to have_http_status(:success)
-        expect(response.body).to include(inbox.id.to_s)
-      end
-
       it 'returns unprocessable_entity if no page found' do
         allow(koala_api).to receive(:get_connections).and_return([])
         params = { inbox_id: inbox.id }

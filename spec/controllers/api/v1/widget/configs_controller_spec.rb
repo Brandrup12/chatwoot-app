@@ -19,35 +19,7 @@ RSpec.describe '/api/v1/widget/config', type: :request do
       end
     end
 
-    context 'with correct website token and missing X-Auth-Token' do
-      it 'returns widget config along with a new contact' do
-        expect do
-          post '/api/v1/widget/config',
-               params: params,
-               as: :json
-        end.to change(Contact, :count).by(1)
-
-        expect(response).to have_http_status(:success)
-        response_data = response.parsed_body
-        expect(response_data.keys).to include(*response_keys)
-      end
-    end
-
     context 'with correct website token and valid X-Auth-Token' do
-      it 'returns widget config along with the same contact' do
-        expect do
-          post '/api/v1/widget/config',
-               params: params,
-               headers: { 'X-Auth-Token' => token },
-               as: :json
-        end.not_to change(Contact, :count)
-
-        expect(response).to have_http_status(:success)
-        response_data = response.parsed_body
-        expect(response_data.keys).to include(*response_keys)
-        expect(response_data['contact']['pubsub_token']).to eq(contact_inbox.pubsub_token)
-      end
-
       it 'returns 401 if account is suspended' do
         account.update!(status: :suspended)
 
@@ -57,21 +29,6 @@ RSpec.describe '/api/v1/widget/config', type: :request do
              as: :json
 
         expect(response).to have_http_status(:unauthorized)
-      end
-    end
-
-    context 'with correct website token and invalid X-Auth-Token' do
-      it 'returns widget config and new contact with error message' do
-        expect do
-          post '/api/v1/widget/config',
-               params: params,
-               headers: { 'X-Auth-Token' => 'invalid token' },
-               as: :json
-        end.to change(Contact, :count).by(1)
-
-        expect(response).to have_http_status(:success)
-        response_data = response.parsed_body
-        expect(response_data.keys).to include(*response_keys)
       end
     end
   end

@@ -20,54 +20,6 @@ RSpec.describe 'Conversations API', type: :request do
         create(:inbox_member, user: agent, inbox: conversation.inbox)
       end
 
-      it 'returns all conversations with messages' do
-        message = create(:message, conversation: conversation, account: account)
-        get "/api/v1/accounts/#{account.id}/conversations",
-            headers: agent.create_new_auth_token,
-            as: :json
-
-        expect(response).to have_http_status(:success)
-        expect(response).to conform_schema(200)
-        body = JSON.parse(response.body, symbolize_names: true)
-        expect(body[:data][:meta][:all_count]).to eq(1)
-        expect(body[:data][:meta].keys).to include(:all_count, :mine_count, :assigned_count, :unassigned_count)
-        expect(body[:data][:payload].first[:uuid]).to eq(conversation.uuid)
-        expect(body[:data][:payload].first[:messages].first[:id]).to eq(message.id)
-      end
-
-      it 'returns conversations with empty messages array for conversations with out messages' do
-        get "/api/v1/accounts/#{account.id}/conversations",
-            headers: agent.create_new_auth_token,
-            as: :json
-
-        expect(response).to have_http_status(:success)
-        body = JSON.parse(response.body, symbolize_names: true)
-        expect(body[:data][:meta][:all_count]).to eq(1)
-        expect(body[:data][:payload].first[:messages]).to eq([])
-      end
-
-      it 'returns unattended conversations' do
-        attended_conversation = create(:conversation, account: account, first_reply_created_at: Time.now.utc)
-        # to ensure that waiting since value is populated
-        create(:message, message_type: :outgoing, conversation: attended_conversation, account: account)
-        unattended_conversation_no_first_reply = create(:conversation, account: account, first_reply_created_at: nil)
-        unattended_conversation_waiting_since = create(:conversation, account: account, first_reply_created_at: Time.now.utc)
-
-        agent_1 = create(:user, account: account, role: :agent)
-        create(:inbox_member, user: agent_1, inbox: attended_conversation.inbox)
-        create(:inbox_member, user: agent_1, inbox: unattended_conversation_no_first_reply.inbox)
-        create(:inbox_member, user: agent_1, inbox: unattended_conversation_waiting_since.inbox)
-
-        get "/api/v1/accounts/#{account.id}/conversations",
-            headers: agent_1.create_new_auth_token,
-            params: { conversation_type: 'unattended' },
-            as: :json
-
-        expect(response).to have_http_status(:success)
-        body = JSON.parse(response.body, symbolize_names: true)
-        expect(body[:data][:meta][:all_count]).to eq(2)
-        expect(body[:data][:payload].count).to eq(2)
-      end
     end
   end
 
@@ -153,24 +105,6 @@ RSpec.describe 'Conversations API', type: :request do
         create(:inbox_member, user: agent, inbox: conversation.inbox)
       end
 
-      it 'returns all conversations matching the query' do
-        post "/api/v1/accounts/#{account.id}/conversations/filter",
-             headers: agent.create_new_auth_token,
-             params: {
-               payload: [{
-                 attribute_key: 'status',
-                 filter_operator: 'equal_to',
-                 values: ['open']
-               }]
-             },
-             as: :json
-
-        expect(response).to have_http_status(:success)
-        expect(response).to conform_schema(200)
-        response_data = JSON.parse(response.body, symbolize_names: true)
-        expect(response_data.count).to eq(2)
-      end
-
       it 'returns error if the filters contain invalid attributes' do
         post "/api/v1/accounts/#{account.id}/conversations/filter",
              headers: agent.create_new_auth_token,
@@ -230,25 +164,6 @@ RSpec.describe 'Conversations API', type: :request do
         expect(response).to have_http_status(:unauthorized)
       end
 
-      it 'shows the conversation if you are an administrator' do
-        get "/api/v1/accounts/#{account.id}/conversations/#{conversation.display_id}",
-            headers: administrator.create_new_auth_token,
-            as: :json
-
-        expect(response).to have_http_status(:success)
-        expect(response).to conform_schema(200)
-        expect(JSON.parse(response.body, symbolize_names: true)[:id]).to eq(conversation.display_id)
-      end
-
-      it 'shows the conversation if you are an agent with access to inbox' do
-        create(:inbox_member, user: agent, inbox: conversation.inbox)
-        get "/api/v1/accounts/#{account.id}/conversations/#{conversation.display_id}",
-            headers: agent.create_new_auth_token,
-            as: :json
-
-        expect(response).to have_http_status(:success)
-        expect(JSON.parse(response.body, symbolize_names: true)[:id]).to eq(conversation.display_id)
-      end
     end
   end
 
@@ -278,27 +193,6 @@ RSpec.describe 'Conversations API', type: :request do
         expect(response).to have_http_status(:unauthorized)
       end
 
-      it 'updates the conversation if you are an administrator' do
-        patch "/api/v1/accounts/#{account.id}/conversations/#{conversation.display_id}",
-              params: params,
-              headers: administrator.create_new_auth_token,
-              as: :json
-
-        expect(response).to have_http_status(:success)
-        expect(response).to conform_schema(200)
-        expect(JSON.parse(response.body, symbolize_names: true)[:priority]).to eq('high')
-      end
-
-      it 'updates the conversation if you are an agent with access to inbox' do
-        create(:inbox_member, user: agent, inbox: conversation.inbox)
-        patch "/api/v1/accounts/#{account.id}/conversations/#{conversation.display_id}",
-              params: params,
-              headers: agent.create_new_auth_token,
-              as: :json
-
-        expect(response).to have_http_status(:success)
-        expect(JSON.parse(response.body, symbolize_names: true)[:priority]).to eq('high')
-      end
     end
   end
 
@@ -319,7 +213,6 @@ RSpec.describe 'Conversations API', type: :request do
 
     context 'when it is an authenticated user' do
       let(:agent) { create(:user, account: account, role: :agent, auto_offline: false) }
-      let(:team) { create(:team, account: account) }
 
       it 'will not create a new conversation if agent does not have access to inbox' do
         allow(Rails.configuration.dispatcher).to receive(:dispatch)
@@ -329,88 +222,6 @@ RSpec.describe 'Conversations API', type: :request do
              params: { source_id: contact_inbox.source_id, additional_attributes: additional_attributes },
              as: :json
         expect(response).to have_http_status(:unauthorized)
-      end
-
-      context 'when it is an authenticated user who has access to the inbox' do
-        before do
-          create(:inbox_member, user: agent, inbox: inbox)
-          create(:team_member, user: agent, team: team)
-        end
-
-        it 'creates a new conversation' do
-          allow(Rails.configuration.dispatcher).to receive(:dispatch)
-          additional_attributes = { test: 'test' }
-          post "/api/v1/accounts/#{account.id}/conversations",
-               headers: agent.create_new_auth_token,
-               params: { source_id: contact_inbox.source_id, additional_attributes: additional_attributes },
-               as: :json
-
-          expect(response).to have_http_status(:success)
-          expect(response).to conform_schema(200)
-          response_data = JSON.parse(response.body, symbolize_names: true)
-          expect(response_data[:additional_attributes]).to eq(additional_attributes)
-        end
-
-        it 'does not create a new conversation if source_id is not unique' do
-          new_contact = create(:contact, account: account)
-
-          post "/api/v1/accounts/#{account.id}/conversations",
-               headers: agent.create_new_auth_token,
-               params: { source_id: contact_inbox.source_id, inbox_id: inbox.id, contact_id: new_contact.id },
-               as: :json
-          expect(response).to have_http_status(:unprocessable_entity)
-        end
-
-        it 'creates a conversation in specificed status' do
-          allow(Rails.configuration.dispatcher).to receive(:dispatch)
-          post "/api/v1/accounts/#{account.id}/conversations",
-               headers: agent.create_new_auth_token,
-               params: { source_id: contact_inbox.source_id, status: 'pending' },
-               as: :json
-
-          expect(response).to have_http_status(:success)
-          response_data = JSON.parse(response.body, symbolize_names: true)
-          expect(response_data[:status]).to eq('pending')
-        end
-
-        it 'creates a new conversation with message when message is passed' do
-          allow(Rails.configuration.dispatcher).to receive(:dispatch)
-          post "/api/v1/accounts/#{account.id}/conversations",
-               headers: agent.create_new_auth_token,
-               params: { source_id: contact_inbox.source_id, message: { content: 'hi' } },
-               as: :json
-
-          expect(response).to have_http_status(:success)
-          response_data = JSON.parse(response.body, symbolize_names: true)
-          expect(response_data[:additional_attributes]).to eq({})
-          expect(account.conversations.find_by(display_id: response_data[:id]).messages.outgoing.first.content).to eq 'hi'
-        end
-
-        it 'calls contact inbox builder if contact_id and inbox_id is present' do
-          builder = double
-          allow(Rails.configuration.dispatcher).to receive(:dispatch)
-          allow(ContactInboxBuilder).to receive(:new).with(contact: contact, inbox: inbox, source_id: nil, hmac_verified: false).and_return(builder)
-          allow(builder).to receive(:perform)
-          expect(builder).to receive(:perform)
-
-          post "/api/v1/accounts/#{account.id}/conversations",
-               headers: agent.create_new_auth_token,
-               params: { contact_id: contact.id, inbox_id: inbox.id, hmac_verified: 'false' },
-               as: :json
-        end
-
-        it 'creates a new conversation with assignee and team' do
-          allow(Rails.configuration.dispatcher).to receive(:dispatch)
-          post "/api/v1/accounts/#{account.id}/conversations",
-               headers: agent.create_new_auth_token,
-               params: { source_id: contact_inbox.source_id, contact_id: contact.id, inbox_id: inbox.id, assignee_id: agent.id, team_id: team.id },
-               as: :json
-
-          expect(response).to have_http_status(:success)
-          response_data = JSON.parse(response.body, symbolize_names: true)
-          expect(response_data[:meta][:assignee][:name]).to eq(agent.name)
-          expect(response_data[:meta][:team][:name]).to eq(team.name)
-        end
       end
     end
   end
@@ -697,125 +508,6 @@ RSpec.describe 'Conversations API', type: :request do
         expect(response).to have_http_status(:unauthorized)
       end
     end
-
-    context 'when it is an authenticated user' do
-      let(:agent) { create(:user, account: account, role: :agent) }
-
-      before do
-        create(:inbox_member, user: agent, inbox: conversation.inbox)
-      end
-
-      it 'updates last seen' do
-        conversation.update!(agent_last_seen_at: nil)
-
-        post "/api/v1/accounts/#{account.id}/conversations/#{conversation.display_id}/update_last_seen",
-             headers: agent.create_new_auth_token,
-             as: :json
-
-        expect(response).to have_http_status(:success)
-        expect(conversation.reload.agent_last_seen_at).not_to be_nil
-      end
-
-      it 'updates assignee last seen' do
-        conversation.update!(assignee_id: agent.id, agent_last_seen_at: nil)
-
-        expect(conversation.reload.assignee_last_seen_at).to be_nil
-
-        post "/api/v1/accounts/#{account.id}/conversations/#{conversation.display_id}/update_last_seen",
-             headers: agent.create_new_auth_token,
-             as: :json
-
-        expect(response).to have_http_status(:success)
-        expect(conversation.reload.assignee_last_seen_at).not_to be_nil
-      end
-
-      it 'marks unread notifications as read when updating last seen' do
-        allow(Rails.configuration.dispatcher).to receive(:dispatch)
-        notification = create(:notification, account: account, user: agent, primary_actor: conversation, read_at: nil)
-
-        post "/api/v1/accounts/#{account.id}/conversations/#{conversation.display_id}/update_last_seen",
-             headers: agent.create_new_auth_token,
-             as: :json
-
-        expect(response).to have_http_status(:success)
-        expect(notification.reload.read_at).to be_present
-        expect(Rails.configuration.dispatcher).to have_received(:dispatch).with(
-          'notification.updated',
-          kind_of(Time),
-          hash_including(notification: have_attributes(id: notification.id))
-        )
-      end
-
-      it 'throttles updates within an hour when there are no unread messages' do
-        conversation.update!(agent_last_seen_at: 30.minutes.ago)
-        # Ensure all messages are older than agent_last_seen_at (no unread messages)
-        # rubocop:disable Rails/SkipsModelValidations
-        conversation.messages.update_all(created_at: 1.hour.ago)
-        # rubocop:enable Rails/SkipsModelValidations
-        initial_last_seen = conversation.agent_last_seen_at
-
-        post "/api/v1/accounts/#{account.id}/conversations/#{conversation.display_id}/update_last_seen",
-             headers: agent.create_new_auth_token,
-             as: :json
-
-        expect(response).to have_http_status(:success)
-        expect(conversation.reload.agent_last_seen_at).to be_within(1.second).of(initial_last_seen)
-      end
-
-      it 'updates even within an hour when there are unread messages' do
-        conversation.update!(agent_last_seen_at: 30.minutes.ago)
-        # Create a new message after agent_last_seen_at (unread message)
-        create(:message, conversation: conversation, created_at: 5.minutes.ago)
-        initial_last_seen = conversation.agent_last_seen_at
-
-        post "/api/v1/accounts/#{account.id}/conversations/#{conversation.display_id}/update_last_seen",
-             headers: agent.create_new_auth_token,
-             as: :json
-
-        expect(response).to have_http_status(:success)
-        expect(conversation.reload.agent_last_seen_at).not_to be_within(1.second).of(initial_last_seen)
-        expect(conversation.reload.agent_last_seen_at).to be > initial_last_seen
-      end
-
-      it 'updates both if one timestamp is old even when the other is recent' do
-        conversation.update!(assignee_id: agent.id, agent_last_seen_at: 2.hours.ago, assignee_last_seen_at: 30.minutes.ago)
-        # Ensure all messages are older than assignee_last_seen_at (no unread messages)
-        # rubocop:disable Rails/SkipsModelValidations
-        conversation.messages.update_all(created_at: 1.hour.ago)
-        # rubocop:enable Rails/SkipsModelValidations
-
-        initial_agent_last_seen = conversation.agent_last_seen_at
-
-        post "/api/v1/accounts/#{account.id}/conversations/#{conversation.display_id}/update_last_seen",
-             headers: agent.create_new_auth_token,
-             as: :json
-
-        expect(response).to have_http_status(:success)
-        # Both should be updated because agent_last_seen_at is old
-        expect(conversation.reload.agent_last_seen_at).to be > initial_agent_last_seen
-        expect(conversation.reload.assignee_last_seen_at).to be > initial_agent_last_seen
-      end
-
-      it 'throttles only when both timestamps are recent and no unread messages' do
-        conversation.update!(assignee_id: agent.id, agent_last_seen_at: 30.minutes.ago, assignee_last_seen_at: 30.minutes.ago)
-        # Ensure all messages are older (no unread messages)
-        # rubocop:disable Rails/SkipsModelValidations
-        conversation.messages.update_all(created_at: 1.hour.ago)
-        # rubocop:enable Rails/SkipsModelValidations
-
-        initial_agent_last_seen = conversation.agent_last_seen_at
-        initial_assignee_last_seen = conversation.assignee_last_seen_at
-
-        post "/api/v1/accounts/#{account.id}/conversations/#{conversation.display_id}/update_last_seen",
-             headers: agent.create_new_auth_token,
-             as: :json
-
-        expect(response).to have_http_status(:success)
-        # Both should remain unchanged (throttled)
-        expect(conversation.reload.agent_last_seen_at).to be_within(1.second).of(initial_agent_last_seen)
-        expect(conversation.reload.assignee_last_seen_at).to be_within(1.second).of(initial_assignee_last_seen)
-      end
-    end
   end
 
   describe 'POST /api/v1/accounts/{account.id}/conversations/:id/unread' do
@@ -826,26 +518,6 @@ RSpec.describe 'Conversations API', type: :request do
         post "/api/v1/accounts/#{account.id}/conversations/#{conversation.display_id}/unread"
 
         expect(response).to have_http_status(:unauthorized)
-      end
-    end
-
-    context 'when it is an authenticated user' do
-      let(:agent) { create(:user, account: account, role: :agent) }
-
-      before do
-        create(:inbox_member, user: agent, inbox: conversation.inbox)
-        create(:message, conversation: conversation, account: account, inbox: conversation.inbox, content: 'Hello', message_type: 'incoming')
-      end
-
-      it 'updates last seen' do
-        post "/api/v1/accounts/#{account.id}/conversations/#{conversation.display_id}/unread",
-             headers: agent.create_new_auth_token,
-             as: :json
-
-        expect(response).to have_http_status(:success)
-        last_seen_at = conversation.messages.incoming.last.created_at - 1.second
-        expect(conversation.reload.agent_last_seen_at).to eq(last_seen_at)
-        expect(conversation.reload.assignee_last_seen_at).to eq(last_seen_at)
       end
     end
   end

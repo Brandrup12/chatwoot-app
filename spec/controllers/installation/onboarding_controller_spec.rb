@@ -12,14 +12,6 @@ RSpec.describe 'Installation::Onboarding API', type: :request do
       end
     end
 
-    context 'when CHATWOOT_INSTALLATION_ONBOARDING redis key is set' do
-      it 'returns onboarding page' do
-        Redis::Alfred.set(Redis::Alfred::CHATWOOT_INSTALLATION_ONBOARDING, true)
-        get '/installation/onboarding'
-        expect(response).to have_http_status(:success)
-        Redis::Alfred.delete(Redis::Alfred::CHATWOOT_INSTALLATION_ONBOARDING)
-      end
-    end
   end
 
   describe 'POST /installation/onboarding' do

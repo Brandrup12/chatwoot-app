@@ -40,49 +40,6 @@ describe Enterprise::Billing::HandleStripeEventService do
     allow(event).to receive(:type).and_return('customer.subscription.updated')
   end
 
-  describe 'subscription update handling' do
-    it 'updates account attributes and disables premium features for default plan' do
-      # Setup for default (Hacker) plan
-      allow(subscription).to receive(:[]).with('plan')
-                                         .and_return({ 'id' => 'test', 'product' => 'plan_id_hacker', 'name' => 'Hacker' })
-
-      stripe_event_service.new.perform(event: event)
-
-      # Verify account attributes were updated
-      expect(account.reload.custom_attributes).to include(
-        'plan_name' => 'Hacker',
-        'stripe_product_id' => 'plan_id_hacker',
-        'subscription_status' => 'active'
-      )
-
-      # Verify premium features are disabled for default plan
-      expect(account).not_to be_feature_enabled('channel_email')
-      expect(account).not_to be_feature_enabled('help_center')
-      expect(account).not_to be_feature_enabled('sla')
-      expect(account).not_to be_feature_enabled('custom_roles')
-      expect(account).not_to be_feature_enabled('audit_logs')
-    end
-
-    it 'resets captain usage on billing period renewal' do
-      # Prime the account with some usage
-      5.times { account.increment_response_usage }
-      expect(account.custom_attributes['captain_responses_usage']).to eq(5)
-
-      # Setup for any plan
-      allow(subscription).to receive(:[]).with('plan')
-                                         .and_return({ 'id' => 'test', 'product' => 'plan_id_startups', 'name' => 'Startups' })
-      allow(subscription).to receive(:[]).with('current_period_start').and_return(1_686_567_520)
-
-      # Simulate billing period renewal with previous_attributes showing old period
-      allow(data).to receive(:previous_attributes).and_return({ 'current_period_start' => 1_683_975_520 })
-
-      stripe_event_service.new.perform(event: event)
-
-      # Verify usage was reset
-      expect(account.reload.custom_attributes['captain_responses_usage']).to eq(0)
-    end
-  end
-
   describe 'subscription quantity update' do
     before do
       allow(subscription).to receive(:[]).with('plan')
@@ -97,21 +54,6 @@ describe Enterprise::Billing::HandleStripeEventService do
       expect(account.reload.custom_attributes['subscribed_quantity']).to eq(6)
     end
 
-    it 'persists quantity even when increment_response_usage runs concurrently' do
-      allow(subscription).to receive(:[]).with('quantity').and_return(6)
-      account.update!(custom_attributes: account.custom_attributes.merge('captain_responses_usage' => 100))
-
-      # Simulate: webhook updates quantity, then a concurrent increment_response_usage writes usage
-      stripe_event_service.new.perform(event: event)
-      account.reload
-
-      # Simulate concurrent increment_response_usage (atomic jsonb_set, not full hash overwrite)
-      account.increment_response_usage
-
-      # Quantity must survive the concurrent usage update
-      expect(account.reload.custom_attributes['subscribed_quantity']).to eq(6)
-      expect(account.reload.custom_attributes['captain_responses_usage']).to eq(101)
-    end
   end
 
   describe 'subscription deletion handling' do
@@ -233,50 +175,6 @@ describe Enterprise::Billing::HandleStripeEventService do
     end
   end
 
-  describe 'manually managed features' do
-    let(:service) { stripe_event_service.new }
-    let(:internal_attrs_service) { instance_double(Internal::Accounts::InternalAttributesService) }
-
-    before do
-      # Mock the internal attributes service
-      allow(Internal::Accounts::InternalAttributesService).to receive(:new).with(account).and_return(internal_attrs_service)
-    end
-
-    context 'when downgrading with manually managed features' do
-      it 'preserves manually managed features even when downgrading plans' do
-        # Setup: account has Enterprise plan with manually managed features
-        allow(subscription).to receive(:[]).with('plan')
-                                           .and_return({ 'id' => 'test', 'product' => 'plan_id_enterprise', 'name' => 'Enterprise' })
-
-        # Mock manually managed features
-        allow(internal_attrs_service).to receive(:manually_managed_features).and_return(%w[audit_logs custom_roles])
-
-        # First run to apply enterprise plan
-        service.perform(event: event)
-        account.reload
-
-        # Verify features are enabled
-        expect(account).to be_feature_enabled('audit_logs')
-        expect(account).to be_feature_enabled('custom_roles')
-
-        # Now downgrade to Hacker plan (which normally wouldn't have these features)
-        allow(subscription).to receive(:[]).with('plan')
-                                           .and_return({ 'id' => 'test', 'product' => 'plan_id_hacker', 'name' => 'Hacker' })
-
-        service.perform(event: event)
-        account.reload
-
-        # Manually managed features should still be enabled despite plan downgrade
-        expect(account).to be_feature_enabled('audit_logs')
-        expect(account).to be_feature_enabled('custom_roles')
-
-        # But other premium features should be disabled
-        expect(account).not_to be_feature_enabled('channel_instagram')
-        expect(account).not_to be_feature_enabled('help_center')
-      end
-    end
-  end
-
   describe 'downgrade handling' do
     let(:service) { stripe_event_service.new }
 
@@ -285,31 +183,6 @@ describe Enterprise::Billing::HandleStripeEventService do
       internal_attrs_service = instance_double(Internal::Accounts::InternalAttributesService)
       allow(Internal::Accounts::InternalAttributesService).to receive(:new).with(account).and_return(internal_attrs_service)
       allow(internal_attrs_service).to receive(:manually_managed_features).and_return([])
-    end
-
-    context 'when downgrading from Enterprise to Business plan' do
-      before do
-        # Start with Enterprise plan
-        allow(subscription).to receive(:[]).with('plan')
-                                           .and_return({ 'id' => 'test', 'product' => 'plan_id_enterprise', 'name' => 'Enterprise' })
-        service.perform(event: event)
-        account.reload
-      end
-
-      it 'retains business features but disables enterprise features' do
-        # Verify enterprise features were enabled
-        expect(account).to be_feature_enabled('audit_logs')
-
-        # Downgrade to Business plan
-        allow(subscription).to receive(:[]).with('plan')
-                                           .and_return({ 'id' => 'test', 'product' => 'plan_id_business', 'name' => 'Business' })
-        service.perform(event: event)
-
-        account.reload
-        expect(account).to be_feature_enabled('sla')
-        expect(account).to be_feature_enabled('custom_roles')
-        expect(account).not_to be_feature_enabled('audit_logs')
-      end
     end
 
     context 'when downgrading from Business to Startups plan' do

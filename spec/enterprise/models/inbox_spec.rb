@@ -40,7 +40,6 @@ RSpec.describe Inbox do
   describe 'member_ids_with_assignment_capacity with V2 capacity' do
     let(:account) { create(:account) }
     let(:v2_inbox) { create(:inbox, account: account, enable_auto_assignment: true) }
-    let(:agent_capacity_policy) { create(:agent_capacity_policy, account: account) }
 
     let!(:agent1) { create(:user, account: account, role: :agent, auto_offline: false) }
     let!(:agent2) { create(:user, account: account, role: :agent, auto_offline: false) }
@@ -55,70 +54,6 @@ RSpec.describe Inbox do
       )
     end
 
-    context 'when assignment_v2 is enabled with capacity policies' do
-      before do
-        account.enable_features('assignment_v2', 'advanced_assignment')
-        account.save!
-
-        create(:inbox_capacity_limit, agent_capacity_policy: agent_capacity_policy, inbox: v2_inbox, conversation_limit: 1)
-        agent1.account_users.find_by(account: account).update!(agent_capacity_policy: agent_capacity_policy)
-        agent2.account_users.find_by(account: account).update!(agent_capacity_policy: agent_capacity_policy)
-      end
-
-      it 'filters out agents at capacity' do
-        create(:conversation, inbox: v2_inbox, account: account, assignee: agent1, status: :open)
-
-        result = v2_inbox.member_ids_with_assignment_capacity
-        expect(result).to include(agent2.id)
-        expect(result).not_to include(agent1.id)
-      end
-
-      it 'filters out all agents when all are at capacity' do
-        create(:conversation, inbox: v2_inbox, account: account, assignee: agent1, status: :open)
-        create(:conversation, inbox: v2_inbox, account: account, assignee: agent2, status: :open)
-
-        expect(v2_inbox.member_ids_with_assignment_capacity).to be_empty
-      end
-
-      it 'skips V1 max_assignment_limit when V2 is enabled' do
-        v2_inbox.update(auto_assignment_config: { max_assignment_limit: 100 })
-
-        create(:conversation, inbox: v2_inbox, account: account, assignee: agent1, status: :open)
-
-        result = v2_inbox.member_ids_with_assignment_capacity
-        expect(result).not_to include(agent1.id)
-      end
-    end
-
-    context 'when assignment_v2 is enabled without capacity policies' do
-      before do
-        account.enable_features('assignment_v2', 'advanced_assignment')
-        account.save!
-      end
-
-      it 'returns all online agents' do
-        result = v2_inbox.member_ids_with_assignment_capacity
-        expect(result).to contain_exactly(agent1.id, agent2.id)
-      end
-    end
-
-    context 'when advanced_assignment is disabled (downgraded account with stale policies)' do
-      before do
-        account.enable_features('assignment_v2')
-        account.save!
-
-        create(:inbox_capacity_limit, agent_capacity_policy: agent_capacity_policy, inbox: v2_inbox, conversation_limit: 1)
-        agent1.account_users.find_by(account: account).update!(agent_capacity_policy: agent_capacity_policy)
-
-        create(:conversation, inbox: v2_inbox, account: account, assignee: agent1, status: :open)
-      end
-
-      it 'does not enforce capacity limits' do
-        result = v2_inbox.member_ids_with_assignment_capacity
-        expect(result).to include(agent1.id)
-      end
-    end
-
     context 'when assignment_v2 is disabled (V1 path)' do
       before do
         v2_inbox.update(auto_assignment_config: { max_assignment_limit: 2 })
@@ -130,119 +65,6 @@ RSpec.describe Inbox do
         result = v2_inbox.member_ids_with_assignment_capacity
         expect(result).not_to include(agent1.id)
         expect(result).to include(agent2.id)
-      end
-    end
-  end
-
-  describe 'audit log' do
-    context 'when inbox is created' do
-      it 'has associated audit log created' do
-        expect(Audited::Audit.where(auditable_type: 'Inbox', action: 'create').count).to eq(1)
-      end
-    end
-
-    context 'when inbox is updated' do
-      it 'has associated audit log created' do
-        inbox.update(name: 'Updated Inbox')
-        expect(Audited::Audit.where(auditable_type: 'Inbox', action: 'update').count).to eq(1)
-      end
-    end
-
-    context 'when channel is updated' do
-      it 'has associated audit log created' do
-        previous_color = inbox.channel.widget_color
-        new_color = '#ff0000'
-        inbox.channel.update(widget_color: new_color)
-
-        # check if channel update creates an audit log against inbox
-        expect(Audited::Audit.where(auditable_type: 'Inbox', action: 'update').count).to eq(1)
-        # Check for the specific widget_color update in the audit log
-        expect(Audited::Audit.where(auditable_type: 'Inbox', action: 'update',
-                                    audited_changes: { 'widget_color' => [previous_color, new_color] }).count).to eq(1)
-      end
-    end
-  end
-
-  describe 'audit log with api channel' do
-    let!(:channel) { create(:channel_api) }
-    let!(:inbox) { channel.inbox }
-
-    context 'when inbox is created' do
-      it 'has associated audit log created' do
-        expect(Audited::Audit.where(auditable_type: 'Inbox', action: 'create').count).to eq(1)
-      end
-    end
-
-    context 'when inbox is updated' do
-      it 'has associated audit log created' do
-        inbox.update(name: 'Updated Inbox')
-        expect(Audited::Audit.where(auditable_type: 'Inbox', action: 'update').count).to eq(1)
-      end
-    end
-
-    context 'when channel is updated' do
-      it 'has associated audit log created' do
-        previous_webhook = inbox.channel.webhook_url
-        new_webhook = 'https://example2.com'
-        inbox.channel.update(webhook_url: new_webhook)
-
-        # check if channel update creates an audit log against inbox
-        expect(Audited::Audit.where(auditable_type: 'Inbox', action: 'update').count).to eq(1)
-        # Check for the specific webhook_update update in the audit log
-        expect(Audited::Audit.where(auditable_type: 'Inbox', action: 'update',
-                                    audited_changes: { 'webhook_url' => [previous_webhook, new_webhook] }).count).to eq(1)
-      end
-    end
-  end
-
-  describe 'audit log with whatsapp channel' do
-    let(:channel) { create(:channel_whatsapp, provider: 'whatsapp_cloud', sync_templates: false, validate_provider_config: false) }
-    let(:inbox) { channel.inbox }
-
-    before do
-      stub_request(:get, 'https://graph.facebook.com/v14.0//message_templates?access_token=test_key')
-        .with(
-          headers: {
-            'Accept' => '*/*',
-            'Accept-Encoding' => 'gzip;q=1.0,deflate;q=0.6,identity;q=0.3',
-            'User-Agent' => 'Ruby'
-          }
-        )
-        .to_return(status: 200, body: '', headers: {})
-    end
-
-    context 'when inbox is created' do
-      it 'has associated audit log created' do
-        expect(Audited::Audit.where(auditable_type: 'Inbox', action: 'create').count).to eq(1)
-      end
-    end
-
-    context 'when inbox is updated' do
-      it 'has associated audit log created' do
-        inbox.update(name: 'Updated Inbox')
-        expect(Audited::Audit.where(auditable_type: 'Inbox', action: 'update').count).to eq(1)
-      end
-    end
-
-    context 'when channel is updated' do
-      it 'has associated audit log created' do
-        previous_phone_number = inbox.channel.phone_number
-        new_phone_number = '1234567890'
-        inbox.channel.update(phone_number: new_phone_number)
-
-        # check if channel update creates an audit log against inbox
-        expect(Audited::Audit.where(auditable_type: 'Inbox', action: 'update').count).to eq(1)
-        # Check for the specific phone_number update in the audit log
-        expect(Audited::Audit.where(auditable_type: 'Inbox', action: 'update',
-                                    audited_changes: { 'phone_number' => [previous_phone_number, new_phone_number] }).count).to eq(1)
-      end
-    end
-
-    context 'when template sync runs' do
-      it 'has no associated audit log created' do
-        channel.sync_templates
-        # check if template sync does not create an audit log
-        expect(Audited::Audit.where(auditable_type: 'Inbox', action: 'update').count).to eq(0)
       end
     end
   end

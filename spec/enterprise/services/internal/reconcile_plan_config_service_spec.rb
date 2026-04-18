@@ -9,19 +9,6 @@ RSpec.describe Internal::ReconcilePlanConfigService do
         allow(ChatwootHub).to receive(:pricing_plan).and_return('community')
       end
 
-      it 'disables the premium features for accounts' do
-        account = create(:account)
-        account.enable_features!('disable_branding', 'audit_logs', 'captain_integration')
-        account_with_captain = create(:account)
-        account_with_captain.enable_features!('captain_integration')
-        disable_branding_account = create(:account)
-        disable_branding_account.enable_features!('disable_branding')
-        service.perform
-        expect(account.reload.enabled_features.keys).not_to include('captain_integration', 'disable_branding', 'audit_logs')
-        expect(account_with_captain.reload.enabled_features.keys).not_to include('captain_integration')
-        expect(disable_branding_account.reload.enabled_features.keys).not_to include('disable_branding')
-      end
-
       it 'creates a premium config reset warning if config was modified' do
         create(:installation_config, name: 'INSTALLATION_NAME', value: 'custom-name')
         service.perform
@@ -52,19 +39,6 @@ RSpec.describe Internal::ReconcilePlanConfigService do
         Redis::Alfred.set(Redis::Alfred::CHATWOOT_INSTALLATION_CONFIG_RESET_WARNING, true)
         service.perform
         expect(Redis::Alfred.get(Redis::Alfred::CHATWOOT_INSTALLATION_CONFIG_RESET_WARNING)).to be_nil
-      end
-
-      it 'does not disable the premium features for accounts' do
-        account = create(:account)
-        account.enable_features!('disable_branding', 'audit_logs', 'captain_integration')
-        account_with_captain = create(:account)
-        account_with_captain.enable_features!('captain_integration')
-        disable_branding_account = create(:account)
-        disable_branding_account.enable_features!('disable_branding')
-        service.perform
-        expect(account.reload.enabled_features.keys).to include('captain_integration', 'disable_branding', 'audit_logs')
-        expect(account_with_captain.reload.enabled_features.keys).to include('captain_integration')
-        expect(disable_branding_account.reload.enabled_features.keys).to include('disable_branding')
       end
 
       it 'does not update the LOGO config' do

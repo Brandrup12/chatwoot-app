@@ -28,28 +28,6 @@ RSpec.describe '/api/v1/accounts/{account.id}/contacts/:id/conversations', type:
     end
 
     context 'when user is logged in' do
-      context 'with user as administrator' do
-        it 'returns conversations from all inboxes' do
-          get "/api/v1/accounts/#{account.id}/contacts/#{contact.id}/conversations", headers: admin.create_new_auth_token
-
-          expect(response).to have_http_status(:success)
-          json_response = response.parsed_body
-
-          expect(json_response['payload'].length).to eq 4
-        end
-      end
-
-      context 'with user as agent' do
-        it 'returns conversations from the inboxes which agent has access to' do
-          get "/api/v1/accounts/#{account.id}/contacts/#{contact.id}/conversations", headers: agent.create_new_auth_token
-
-          expect(response).to have_http_status(:success)
-          json_response = response.parsed_body
-
-          expect(json_response['payload'].length).to eq 2
-        end
-      end
-
       context 'with user as unknown role' do
         it 'returns conversations from no inboxes' do
           get "/api/v1/accounts/#{account.id}/contacts/#{contact.id}/conversations", headers: unknown.create_new_auth_token

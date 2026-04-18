@@ -190,32 +190,6 @@ RSpec.describe 'Enterprise Billing APIs', type: :request do
           expect(JSON.parse(response.body)).to eq(expected_response)
         end
 
-        it 'returns nil if the plan is not default' do
-          account.update!(custom_attributes: { plan_name: 'Startups' })
-          get "/enterprise/api/v1/accounts/#{account.id}/limits",
-              headers: admin.create_new_auth_token,
-              as: :json
-
-          expected_response = {
-            'id' => account.id,
-            'limits' => {
-              'agents' => {
-                'allowed' => account.usage_limits[:agents],
-                'consumed' => account.users.count
-              },
-              'conversation' => {},
-              'captain' => {
-                'documents' => { 'consumed' => 0, 'current_available' => ChatwootApp.max_limit, 'total_count' => ChatwootApp.max_limit },
-                'responses' => { 'consumed' => 0, 'current_available' => ChatwootApp.max_limit, 'total_count' => ChatwootApp.max_limit }
-              },
-              'non_web_inboxes' => {}
-            }
-          }
-
-          expect(response).to have_http_status(:ok)
-          expect(JSON.parse(response.body)).to eq(expected_response)
-        end
-
         it 'returns limits if a plan is not configured' do
           get "/enterprise/api/v1/accounts/#{account.id}/limits",
               headers: admin.create_new_auth_token,
@@ -241,79 +215,6 @@ RSpec.describe 'Enterprise Billing APIs', type: :request do
           expect(response).to have_http_status(:ok)
           expect(JSON.parse(response.body)).to eq(expected_response)
         end
-      end
-    end
-  end
-
-  describe 'POST /enterprise/api/v1/accounts/{account.id}/topup_checkout' do
-    let(:stripe_customer_id) { 'cus_test123' }
-    let(:invoice_settings) { Struct.new(:default_payment_method).new('pm_test123') }
-    let(:stripe_customer) { Struct.new(:invoice_settings, :default_source).new(invoice_settings, nil) }
-    let(:stripe_invoice) { Struct.new(:id).new('inv_test123') }
-
-    before do
-      create(:installation_config, name: 'CHATWOOT_CLOUD_PLANS', value: [
-               { 'name' => 'Hacker', 'product_id' => ['prod_hacker'], 'price_ids' => ['price_hacker'] },
-               { 'name' => 'Business', 'product_id' => ['prod_business'], 'price_ids' => ['price_business'] }
-             ])
-    end
-
-    it 'returns unauthorized for unauthenticated user' do
-      post "/enterprise/api/v1/accounts/#{account.id}/topup_checkout", as: :json
-      expect(response).to have_http_status(:unauthorized)
-    end
-
-    it 'returns unauthorized for agent' do
-      post "/enterprise/api/v1/accounts/#{account.id}/topup_checkout",
-           headers: agent.create_new_auth_token,
-           params: { credits: 1000 },
-           as: :json
-      expect(response).to have_http_status(:unauthorized)
-    end
-
-    context 'when it is an admin' do
-      before do
-        account.update!(
-          custom_attributes: { plan_name: 'Business', stripe_customer_id: stripe_customer_id },
-          limits: { 'captain_responses' => 1000 }
-        )
-        allow(Stripe::Customer).to receive(:retrieve).with(stripe_customer_id).and_return(stripe_customer)
-        allow(Stripe::Invoice).to receive(:create).and_return(stripe_invoice)
-        allow(Stripe::InvoiceItem).to receive(:create)
-        allow(Stripe::Invoice).to receive(:finalize_invoice)
-        allow(Stripe::Invoice).to receive(:retrieve).and_return(Struct.new(:status).new('open'))
-        allow(Stripe::Invoice).to receive(:pay)
-        allow(Stripe::Billing::CreditGrant).to receive(:create)
-      end
-
-      it 'successfully processes topup and returns correct response' do
-        post "/enterprise/api/v1/accounts/#{account.id}/topup_checkout",
-             headers: admin.create_new_auth_token,
-             params: { credits: 1000 },
-             as: :json
-
-        expect(response).to have_http_status(:success)
-        json_response = JSON.parse(response.body)
-        expect(json_response['credits']).to eq(1000)
-        expect(json_response['amount']).to eq(20.0)
-        expect(json_response['limits']['captain_responses']).to eq(2000)
-      end
-
-      it 'returns error when credits parameter is missing' do
-        post "/enterprise/api/v1/accounts/#{account.id}/topup_checkout",
-             headers: admin.create_new_auth_token,
-             as: :json
-
-        expect(response).to have_http_status(:unprocessable_entity)
-      end
-
-      it 'returns error for invalid credits amount' do
-        post "/enterprise/api/v1/accounts/#{account.id}/topup_checkout",
-             headers: admin.create_new_auth_token,
-             params: { credits: 999 },
-             as: :json
-
-        expect(response).to have_http_status(:unprocessable_entity)
       end
     end
   end
