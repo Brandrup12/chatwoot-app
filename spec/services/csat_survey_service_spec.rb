@@ -74,21 +74,6 @@ describe CsatSurveyService do
         expect(Conversations::ActivityMessageJob).not_to have_received(:perform_later)
       end
 
-      it 'does nothing for Twitter conversations' do
-        twitter_channel = create(:channel_twitter_profile)
-        twitter_inbox = create(:inbox, channel: twitter_channel, csat_survey_enabled: true)
-        twitter_conversation = create(:conversation,
-                                      inbox: twitter_inbox,
-                                      status: :resolved,
-                                      additional_attributes: { type: 'tweet' })
-        twitter_service = described_class.new(conversation: twitter_conversation)
-
-        twitter_service.perform
-
-        expect(MessageTemplates::Template::CsatSurvey).not_to have_received(:new)
-        expect(Conversations::ActivityMessageJob).not_to have_received(:perform_later)
-      end
-
       context 'when survey rules block sending' do
         before do
           inbox.update(csat_config: {

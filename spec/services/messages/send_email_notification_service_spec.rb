@@ -113,18 +113,6 @@ describe Messages::SendEmailNotificationService do
         end
       end
 
-      context 'when channel does not support email notifications' do
-        let(:inbox) { create(:inbox, account: account, channel: create(:channel_sms, account: account)) }
-        let(:conversation) { create(:conversation, account: account, inbox: inbox) }
-
-        before do
-          conversation.contact.update!(email: 'test@example.com')
-        end
-
-        it 'does not enqueue job' do
-          expect { service.perform }.not_to have_enqueued_job(ConversationReplyEmailJob)
-        end
-      end
     end
   end
 

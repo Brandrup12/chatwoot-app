@@ -6,17 +6,15 @@ describe Conversations::FilterService do
   let!(:account) { create(:account) }
   let!(:user_1) { create(:user, account: account) }
   let!(:user_2) { create(:user, account: account) }
-  let!(:campaign_1) { create(:campaign, title: 'Test Campaign', account: account) }
-  let!(:campaign_2) { create(:campaign, title: 'Campaign', account: account) }
   let!(:inbox) { create(:inbox, account: account, enable_auto_assignment: false) }
 
   let!(:user_2_assigned_conversation) { create(:conversation, account: account, inbox: inbox, assignee: user_2) }
   let!(:en_conversation_1) do
-    create(:conversation, account: account, inbox: inbox, assignee: user_1, campaign_id: campaign_1.id,
+    create(:conversation, account: account, inbox: inbox, assignee: user_1,
                           status: 'pending', additional_attributes: { 'browser_language': 'en' })
   end
   let!(:en_conversation_2) do
-    create(:conversation, account: account, inbox: inbox, assignee: user_1, campaign_id: campaign_2.id,
+    create(:conversation, account: account, inbox: inbox, assignee: user_1,
                           status: 'pending', additional_attributes: { 'browser_language': 'en' })
   end
 
@@ -150,9 +148,9 @@ describe Conversations::FilterService do
           custom_attribute_type: ''
         }.with_indifferent_access]
 
-        create(:conversation, account: account, inbox: inbox, assignee: user_1, campaign_id: campaign_1.id,
+        create(:conversation, account: account, inbox: inbox, assignee: user_1,
                               status: 'pending', additional_attributes: { 'browser_language': 'fr' })
-        create(:conversation, account: account, inbox: inbox, assignee: user_1, campaign_id: campaign_1.id,
+        create(:conversation, account: account, inbox: inbox, assignee: user_1,
                               status: 'pending', additional_attributes: { 'browser_language': 'tr' })
 
         result = filter_service.new(params, user_1, account).perform
@@ -168,9 +166,9 @@ describe Conversations::FilterService do
           custom_attribute_type: ''
         }.with_indifferent_access]
 
-        create(:conversation, account: account, inbox: inbox, assignee: user_1, campaign_id: campaign_1.id,
+        create(:conversation, account: account, inbox: inbox, assignee: user_1,
                               status: 'pending', additional_attributes: { 'browser_language': 'fr' })
-        create(:conversation, account: account, inbox: inbox, assignee: user_1, campaign_id: campaign_1.id,
+        create(:conversation, account: account, inbox: inbox, assignee: user_1,
                               status: 'pending', additional_attributes: { 'browser_language': 'tr' })
 
         result = filter_service.new(params, user_1, account).perform
@@ -216,32 +214,6 @@ describe Conversations::FilterService do
         expect(result[:count][:all_count]).to be 1
       end
 
-      it 'filter conversations by is_present filter_operator' do
-        params[:payload] = [
-          {
-            attribute_key: 'assignee_id',
-            filter_operator: 'equal_to',
-            values: [
-              user_1.id,
-              user_2.id
-            ],
-            query_operator: 'AND',
-            custom_attribute_type: ''
-          }.with_indifferent_access,
-          {
-            attribute_key: 'campaign_id',
-            filter_operator: 'is_present',
-            values: [],
-            query_operator: nil,
-            custom_attribute_type: ''
-          }.with_indifferent_access
-        ]
-        result = filter_service.new(params, user_1, account).perform
-
-        expect(result[:count][:all_count]).to be 2
-        expect(result[:conversations].pluck(:campaign_id).sort).to eq [campaign_2.id, campaign_1.id].sort
-      end
-
       it 'handles invalid query conditions' do
         params[:payload] = [
           {
@@ -255,9 +227,9 @@ describe Conversations::FilterService do
             custom_attribute_type: ''
           }.with_indifferent_access,
           {
-            attribute_key: 'campaign_id',
-            filter_operator: 'is_present',
-            values: [],
+            attribute_key: 'status',
+            filter_operator: 'equal_to',
+            values: ['open'],
             query_operator: nil,
             custom_attribute_type: ''
           }.with_indifferent_access

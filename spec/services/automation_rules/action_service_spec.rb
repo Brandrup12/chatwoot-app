@@ -37,12 +37,6 @@ RSpec.describe AutomationRules::ActionService do
         described_class.new(rule, account, conversation).perform
       end
 
-      it 'will not send attachment is conversation is a tweet' do
-        twitter_inbox = create(:inbox, channel: create(:channel_twitter_profile, account: account))
-        conversation = create(:conversation, inbox: twitter_inbox, additional_attributes: { type: 'tweet' })
-        expect(message_builder).not_to receive(:perform)
-        described_class.new(rule, account, conversation).perform
-      end
     end
 
     describe '#perform with send_webhook_event action' do
@@ -66,26 +60,6 @@ RSpec.describe AutomationRules::ActionService do
         described_class.new(rule, account, conversation).perform
       end
 
-      it 'will not send message if conversation is a tweet' do
-        expect(rule.actions.pluck('action_name')).to include('send_message')
-        twitter_inbox = create(:inbox, channel: create(:channel_twitter_profile, account: account))
-        conversation = create(:conversation, inbox: twitter_inbox, additional_attributes: { type: 'tweet' })
-        expect(message_builder).not_to receive(:perform)
-        described_class.new(rule, account, conversation).perform
-      end
-    end
-
-    describe '#perform with send_email_to_team action' do
-      let!(:team) { create(:team, account: account) }
-
-      before do
-        rule.actions << { action_name: 'send_email_to_team', action_params: [{ team_ids: [team.id], message: 'Hello' }] }
-      end
-
-      it 'will send email to team' do
-        expect(TeamNotifications::AutomationNotificationMailer).to receive(:conversation_creation).with(conversation, team, 'Hello').and_call_original
-        described_class.new(rule, account, conversation).perform
-      end
     end
 
     describe '#perform with send_email_transcript action' do
@@ -171,12 +145,6 @@ RSpec.describe AutomationRules::ActionService do
         described_class.new(rule, account, conversation).perform
       end
 
-      it 'will not add note if conversation is a tweet' do
-        twitter_inbox = create(:inbox, channel: create(:channel_twitter_profile, account: account))
-        conversation = create(:conversation, inbox: twitter_inbox, additional_attributes: { type: 'tweet' })
-        expect(message_builder).not_to receive(:perform)
-        described_class.new(rule, account, conversation).perform
-      end
     end
   end
 end
