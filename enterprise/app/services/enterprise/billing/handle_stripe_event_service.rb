@@ -1,6 +1,5 @@
 class Enterprise::Billing::HandleStripeEventService
   CLOUD_PLANS_CONFIG = 'CHATWOOT_CLOUD_PLANS'.freeze
-  CAPTAIN_CLOUD_PLAN_LIMITS = 'CAPTAIN_CLOUD_PLAN_LIMITS'.freeze
 
   STARTUP_PLAN_FEATURES = Enterprise::Billing::ReconcilePlanFeaturesService::STARTUP_PLAN_FEATURES
   BUSINESS_PLAN_FEATURES = Enterprise::Billing::ReconcilePlanFeaturesService::BUSINESS_PLAN_FEATURES
@@ -27,29 +26,8 @@ class Enterprise::Billing::HandleStripeEventService
     # skipping self hosted plan events
     return if plan.blank? || account.blank?
 
-    previous_usage = capture_previous_usage
     update_account_attributes(subscription, plan)
     Enterprise::Billing::ReconcilePlanFeaturesService.new(account: account).perform
-
-    if billing_period_renewed?
-      ActiveRecord::Base.transaction do
-        handle_subscription_credits(plan, previous_usage)
-        account.reset_response_usage
-      end
-    elsif plan_changed?
-      handle_plan_change_credits(plan, previous_usage)
-    end
-  end
-
-  def capture_previous_usage
-    { responses: account.custom_attributes['captain_responses_usage'].to_i, monthly: current_plan_credits[:responses] }
-  end
-
-  def current_plan_credits
-    plan_name = account.custom_attributes['plan_name']
-    return { responses: 0, documents: 0 } if plan_name.blank?
-
-    get_plan_credits(plan_name)
   end
 
   def update_account_attributes(subscription, plan)
@@ -72,37 +50,6 @@ class Enterprise::Billing::HandleStripeEventService
     return if account.blank?
 
     Enterprise::Billing::CreateStripeCustomerService.new(account: account).perform
-  end
-
-  def handle_subscription_credits(plan, previous_usage)
-    current_limits = account.limits || {}
-
-    current_credits = current_limits['captain_responses'].to_i
-    new_plan_credits = get_plan_credits(plan['name'])[:responses]
-
-    consumed_topup_credits = [previous_usage[:responses] - previous_usage[:monthly], 0].max
-    updated_credits = current_credits - consumed_topup_credits - previous_usage[:monthly] + new_plan_credits
-
-    Rails.logger.info("Updating subscription credits for account #{account.id}: #{current_credits} -> #{updated_credits}")
-    account.update!(limits: current_limits.merge('captain_responses' => updated_credits))
-  end
-
-  def handle_plan_change_credits(new_plan, previous_usage)
-    current_limits = account.limits || {}
-    current_credits = current_limits['captain_responses'].to_i
-
-    previous_plan_credits = previous_usage[:monthly]
-    new_plan_credits = get_plan_credits(new_plan['name'])[:responses]
-
-    updated_credits = current_credits - previous_plan_credits + new_plan_credits
-
-    account.update!(limits: current_limits.merge('captain_responses' => updated_credits))
-  end
-
-  def get_plan_credits(plan_name)
-    config = InstallationConfig.find_by(name: CAPTAIN_CLOUD_PLAN_LIMITS).value
-    config = JSON.parse(config) if config.is_a?(String)
-    config[plan_name.downcase]&.symbolize_keys
   end
 
   def subscription

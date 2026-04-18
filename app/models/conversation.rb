@@ -53,9 +53,7 @@
 
 class Conversation < ApplicationRecord
   include Labelable
-  include LlmFormattable
   include AssignmentHandler
-  include AutoAssignmentHandler
   include ActivityMessageHandler
   include UrlHelper
   include SortHandler
@@ -103,8 +101,6 @@ class Conversation < ApplicationRecord
   belongs_to :assignee_agent_bot, class_name: 'AgentBot', optional: true
   belongs_to :contact
   belongs_to :contact_inbox
-  belongs_to :team, optional: true
-  belongs_to :campaign, optional: true
 
   has_many :mentions, dependent: :destroy_async
   has_many :messages, dependent: :destroy_async, autosave: true
@@ -112,7 +108,6 @@ class Conversation < ApplicationRecord
   has_many :conversation_participants, dependent: :destroy_async
   has_many :notifications, as: :primary_actor, dependent: :destroy_async
   has_many :attachments, through: :messages
-  has_many :reporting_events, dependent: :destroy_async
 
   before_save :ensure_snooze_until_reset
   before_create :determine_conversation_status
@@ -343,6 +338,5 @@ class Conversation < ApplicationRecord
   end
 end
 
-Conversation.include_mod_with('Audit::Conversation')
 Conversation.include_mod_with('Concerns::Conversation')
 Conversation.prepend_mod_with('Conversation')

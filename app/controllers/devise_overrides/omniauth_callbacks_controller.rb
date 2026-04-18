@@ -37,7 +37,7 @@ class DeviseOverrides::OmniauthCallbacksController < DeviseTokenAuth::OmniauthCa
     params = { email: encoded_email, sso_auth_token: @resource.generate_sso_auth_token }.to_query
 
     mobile_deep_link_base = GlobalConfigService.load('MOBILE_DEEP_LINK_BASE', 'chatwootapp')
-    redirect_to "#{mobile_deep_link_base}://auth/saml?#{params}", allow_other_host: true
+    redirect_to "#{mobile_deep_link_base}://auth?#{params}", allow_other_host: true
   end
 
   def sign_up_user

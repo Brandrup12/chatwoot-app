@@ -11,14 +11,13 @@ class Enterprise::Billing::ReconcilePlanFeaturesService
     channel_facebook
     channel_email
     channel_instagram
-    captain_integration
     advanced_search_indexing
     advanced_search
     linear_integration
   ].freeze
 
   BUSINESS_PLAN_FEATURES = %w[sla custom_roles csat_review_notes conversation_required_attributes advanced_assignment custom_tools].freeze
-  ENTERPRISE_PLAN_FEATURES = %w[audit_logs disable_branding saml].freeze
+  ENTERPRISE_PLAN_FEATURES = %w[disable_branding].freeze
   PREMIUM_PLAN_FEATURES = (STARTUP_PLAN_FEATURES + BUSINESS_PLAN_FEATURES + ENTERPRISE_PLAN_FEATURES).freeze
 
   pattr_initialize [:account!]

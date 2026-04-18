@@ -4,49 +4,10 @@ class CsatTemplateUtilityAnalysisService
   pattr_initialize [:account!, :inbox!, :message!, { button_text: nil, language: 'en' }]
 
   def perform
-    baseline = rule_based_result
-    return baseline if baseline[:classification] == 'LIKELY_MARKETING'
-
-    llm_result = llm_result_or_nil(baseline)
-    llm_result || baseline
+    rule_based_result
   end
 
   private
-
-  def llm_result_or_nil(baseline)
-    llm_output = Captain::CsatUtilityAnalysisService.new(
-      account: account,
-      message: message,
-      button_text: button_text,
-      language: language,
-      baseline: baseline
-    ).perform
-
-    return nil if llm_output[:error]
-
-    normalize_llm_result(llm_output, baseline: baseline)
-  rescue StandardError => e
-    Rails.logger.error("CSAT utility LLM analysis failed for inbox #{inbox.id}: #{e.message}")
-    nil
-  end
-
-  def normalize_llm_result(result, baseline:)
-    classification = normalized_classification(result[:classification], baseline: baseline)
-    optimized_message = result[:optimized_message].presence || baseline[:optimized_message]
-    optimized_message = baseline[:optimized_message] if baseline[:classification] == 'LIKELY_MARKETING'
-
-    {
-      classification: classification,
-      optimized_message: optimized_message
-    }
-  end
-
-  def normalized_classification(value, baseline:)
-    raw = value.to_s
-    return 'LIKELY_MARKETING' if baseline[:classification] == 'LIKELY_MARKETING'
-
-    raw
-  end
 
   def rule_based_result
     text = sanitized_message

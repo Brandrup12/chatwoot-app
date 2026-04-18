@@ -181,36 +181,6 @@
   type: secret
 # End of Microsoft Email Channel Config
 
-# MARK: Captain Config
-- name: CAPTAIN_OPEN_AI_API_KEY
-  display_title: 'OpenAI API Key'
-  description: 'The API key used to authenticate requests to OpenAI services for Captain AI.'
-  locked: false
-  type: secret
-- name: CAPTAIN_OPEN_AI_MODEL
-  display_title: 'OpenAI Model'
-  description: 'The OpenAI model configured for use in Captain AI. Default: gpt-4.1-mini'
-  locked: false
-- name: CAPTAIN_OPEN_AI_ENDPOINT
-  display_title: 'OpenAI API Endpoint (optional)'
-  description: 'The OpenAI endpoint configured for use in Captain AI. Default: https://api.openai.com/'
-  locked: false
-- name: CAPTAIN_EMBEDDING_MODEL
-  display_title: 'Embedding Model (optional)'
-  description: 'The embedding model configured for use in Captain AI. Default: text-embedding-3-small'
-  locked: false
-- name: CAPTAIN_FIRECRAWL_API_KEY
-  display_title: 'FireCrawl API Key (optional)'
-  description: 'The FireCrawl API key for the Captain AI service'
-  locked: false
-  type: secret
-- name: CAPTAIN_CLOUD_PLAN_LIMITS
-  display_title: 'Captain Cloud Plan Limits'
-  description: 'The limits for the Captain AI service for different plans'
-  value:
-  type: code
-# End of Captain Config
-
 # ------- Context.dev Config ------- #
 - name: CONTEXT_DEV_API_KEY
   display_title: 'Context.dev API Key'
@@ -477,15 +447,6 @@
   type: boolean
 ## ------ End of Configs added for Google OAuth ------ ##
 
-## ------ Configs added for SAML SSO ------ ##
-- name: ENABLE_SAML_SSO_LOGIN
-  display_title: 'Enable SAML SSO login'
-  value: true
-  locked: false
-  description: 'Show SAML SSO as a login option. Cannot be disabled if any users are using SAML authentication.'
-  type: boolean
-## ------ End of Configs added for SAML SSO ------ ##
-
 ## ------ Configs added for Cloudflare ------ ##
 - name: CLOUDFLARE_API_KEY
   display_title: 'Cloudflare API Key'
@@ -508,27 +469,3 @@
   description: 'Token expiry in days'
 ## ------ End of Customizations for Customers ------ ##
 
-## ----- LLM Observability ---- ##
-- name: OTEL_PROVIDER
-  display_title: 'OpenTelemetry Provider'
-  description: 'LLM observability provider (langfuse, langsmith, etc.)'
-  value: ''
-  locked: false
-- name: LANGFUSE_PUBLIC_KEY
-  display_title: 'Langfuse Public Key'
-  description: 'Public key for Langfuse authentication'
-  value: ''
-  locked: false
-  type: secret
-- name: LANGFUSE_SECRET_KEY
-  display_title: 'Langfuse Secret Key'
-  description: 'Secret key for Langfuse authentication'
-  value: ''
-  locked: false
-  type: secret
-- name: LANGFUSE_BASE_URL
-  display_title: 'Langfuse Base URL'
-  description: 'Langfuse endpoint (US: https://us.cloud.langfuse.com, EU: https://cloud.langfuse.com)'
-  value: 'https://us.cloud.langfuse.com'
-  locked: false
-## ---- End of LLM Observability ---- ##

@@ -82,5 +82,4 @@ class AccountUser < ApplicationRecord
 end
 
 AccountUser.prepend_mod_with('AccountUser')
-AccountUser.include_mod_with('Audit::AccountUser')
 AccountUser.include_mod_with('Concerns::AccountUser')

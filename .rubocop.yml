@@ -22,7 +22,6 @@ Metrics/ClassLength:
 Metrics/MethodLength:
   Max: 19
   Exclude:
-    - 'enterprise/lib/captain/agent.rb'
 
 RSpec/ExampleLength:
   Max: 50
@@ -92,14 +91,9 @@ Metrics/ModuleLength:
     - lib/seeders/message_seeder.rb
     - spec/support/slack_stubs.rb
 
-Rails/HelperInstanceVariable:
-  Exclude:
-    - enterprise/app/helpers/captain/chat_helper.rb
-    - enterprise/app/helpers/captain/chat_response_helper.rb
 Rails/ApplicationController:
   Exclude:
     - 'app/controllers/api/v1/widget/messages_controller.rb'
-    - 'app/controllers/dashboard_controller.rb'
     - 'app/controllers/widget_tests_controller.rb'
     - 'app/controllers/widgets_controller.rb'
     - 'app/controllers/platform_controller.rb'
@@ -123,15 +117,10 @@ Rails/TimeZoneAssignment:
 Rails/RedundantPresenceValidationOnBelongsTo:
   Enabled: false
 
-Rails/InverseOf:
-  Exclude:
-    - enterprise/app/models/captain/assistant.rb
-
 Rails/UniqueValidationWithoutIndex:
   Exclude:
     - app/models/canned_response.rb
     - app/models/telegram_bot.rb
-    - enterprise/app/models/captain_inbox.rb
     - 'app/models/channel/twitter_profile.rb'
     - 'app/models/webhook.rb'
     - 'app/models/contact.rb'

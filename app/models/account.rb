@@ -25,10 +25,8 @@
 class Account < ApplicationRecord
   # used for single column multi flags
   include FlagShihTzu
-  include Reportable
   include Featurable
   include CacheKeys
-  include CaptainFeaturable
   include AccountEmailRateLimitable
   include AccountSettingsSchema
 
@@ -42,29 +40,20 @@ class Account < ApplicationRecord
   validates_with JsonSchemaValidator,
                  schema: SETTINGS_PARAMS_SCHEMA,
                  attribute_resolver: ->(record) { record.settings }
-  validate :validate_reporting_timezone
   validate :validate_support_email_format, if: :will_save_change_to_support_email?
 
   store_accessor :settings, :auto_resolve_after, :auto_resolve_message, :auto_resolve_ignore_waiting
 
-  store_accessor :settings, :audio_transcriptions, :auto_resolve_label
-  store_accessor :settings, :captain_models, :captain_features
-  store_accessor :settings, :reporting_timezone
+  store_accessor :settings, :auto_resolve_label
   store_accessor :settings, :keep_pending_on_bot_failure
-  store_accessor :settings, :captain_auto_resolve_mode
-  include AccountCaptainAutoResolve
 
   has_many :account_users, dependent: :destroy_async
   has_many :agent_bot_inboxes, dependent: :destroy_async
   has_many :agent_bots, dependent: :destroy_async
   has_many :api_channels, dependent: :destroy_async, class_name: '::Channel::Api'
-  has_many :articles, dependent: :destroy_async, class_name: '::Article'
-  has_many :assignment_policies, dependent: :destroy_async
   has_many :automation_rules, dependent: :destroy_async
   has_many :macros, dependent: :destroy_async
-  has_many :campaigns, dependent: :destroy_async
   has_many :canned_responses, dependent: :destroy_async
-  has_many :categories, dependent: :destroy_async, class_name: '::Category'
   has_many :contacts, dependent: :destroy_async
   has_many :conversations, dependent: :destroy_async
   has_many :csat_survey_responses, dependent: :destroy_async
@@ -75,27 +64,18 @@ class Account < ApplicationRecord
   has_many :email_channels, dependent: :destroy_async, class_name: '::Channel::Email'
   has_many :facebook_pages, dependent: :destroy_async, class_name: '::Channel::FacebookPage'
   has_many :instagram_channels, dependent: :destroy_async, class_name: '::Channel::Instagram'
-  has_many :tiktok_channels, dependent: :destroy_async, class_name: '::Channel::Tiktok'
   has_many :hooks, dependent: :destroy_async, class_name: 'Integrations::Hook'
   has_many :inboxes, dependent: :destroy_async
   has_many :labels, dependent: :destroy_async
-  has_many :line_channels, dependent: :destroy_async, class_name: '::Channel::Line'
   has_many :mentions, dependent: :destroy_async
   has_many :messages, dependent: :destroy_async
   has_many :notes, dependent: :destroy_async
   has_many :notification_settings, dependent: :destroy_async
   has_many :notifications, dependent: :destroy_async
-  has_many :portals, dependent: :destroy_async, class_name: '::Portal'
-  has_many :sms_channels, dependent: :destroy_async, class_name: '::Channel::Sms'
-  has_many :teams, dependent: :destroy_async
-  has_many :telegram_channels, dependent: :destroy_async, class_name: '::Channel::Telegram'
-  has_many :twilio_sms, dependent: :destroy_async, class_name: '::Channel::TwilioSms'
-  has_many :twitter_profiles, dependent: :destroy_async, class_name: '::Channel::TwitterProfile'
   has_many :users, through: :account_users
   has_many :web_widgets, dependent: :destroy_async, class_name: '::Channel::WebWidget'
   has_many :webhooks, dependent: :destroy_async
   has_many :whatsapp_channels, dependent: :destroy_async, class_name: '::Channel::Whatsapp'
-  has_many :working_hours, dependent: :destroy_async
 
   has_one_attached :contacts_export
 
@@ -106,7 +86,6 @@ class Account < ApplicationRecord
 
   before_validation :validate_limit_keys
   after_create_commit :notify_creation
-  after_destroy :remove_account_sequences
 
   def agents
     users.where(account_users: { role: :agent })
@@ -167,18 +146,8 @@ class Account < ApplicationRecord
     "execute format('create sequence IF NOT EXISTS conv_dpid_seq_%s', NEW.id);"
   end
 
-  trigger.name('camp_dpid_before_insert').after(:insert).for_each(:row) do
-    "execute format('create sequence IF NOT EXISTS camp_dpid_seq_%s', NEW.id);"
-  end
-
   def validate_limit_keys
     # method overridden in enterprise module
-  end
-
-  def validate_reporting_timezone
-    return if reporting_timezone.blank? || ActiveSupport::TimeZone[reporting_timezone].present?
-
-    errors.add(:reporting_timezone, I18n.t('errors.account.reporting_timezone.invalid'))
   end
 
   def validate_support_email_format
@@ -200,4 +169,3 @@ end
 Account.prepend_mod_with('Account')
 Account.prepend_mod_with('Account::PlanUsageAndLimits')
 Account.include_mod_with('Concerns::Account')
-Account.include_mod_with('Audit::Account')

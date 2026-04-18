@@ -10,32 +10,13 @@ Rails.application.routes.draw do
 
   post 'resend_confirmation', to: 'auth/resend_confirmations#create'
 
-  ## renders the frontend paths only if its not an api only server
-  if ActiveModel::Type::Boolean.new.cast(ENV.fetch('CW_API_ONLY_SERVER', false))
-    root to: 'api#index'
-  else
-    root to: 'dashboard#index'
+  root to: 'api#index'
 
-    get '/app', to: 'dashboard#index'
-    get '/app/*params', to: 'dashboard#index'
-    get '/app/accounts/:account_id/settings/inboxes/new/twitter', to: 'dashboard#index', as: 'app_new_twitter_inbox'
-    get '/app/accounts/:account_id/settings/inboxes/new/microsoft', to: 'dashboard#index', as: 'app_new_microsoft_inbox'
-    get '/app/accounts/:account_id/settings/inboxes/new/instagram', to: 'dashboard#index', as: 'app_new_instagram_inbox'
-    get '/app/accounts/:account_id/settings/inboxes/new/tiktok', to: 'dashboard#index', as: 'app_new_tiktok_inbox'
-    get '/app/accounts/:account_id/settings/inboxes/new/:inbox_id/agents', to: 'dashboard#index', as: 'app_twitter_inbox_agents'
-    get '/app/accounts/:account_id/settings/inboxes/new/:inbox_id/agents', to: 'dashboard#index', as: 'app_email_inbox_agents'
-    get '/app/accounts/:account_id/settings/inboxes/new/:inbox_id/agents', to: 'dashboard#index', as: 'app_instagram_inbox_agents'
-    get '/app/accounts/:account_id/settings/inboxes/new/:inbox_id/agents', to: 'dashboard#index', as: 'app_tiktok_inbox_agents'
-    get '/app/accounts/:account_id/settings/inboxes/:inbox_id', to: 'dashboard#index', as: 'app_instagram_inbox_settings'
-    get '/app/accounts/:account_id/settings/inboxes/:inbox_id', to: 'dashboard#index', as: 'app_tiktok_inbox_settings'
-    get '/app/accounts/:account_id/settings/inboxes/:inbox_id', to: 'dashboard#index', as: 'app_email_inbox_settings'
-
-    resource :widget, only: [:show]
-    namespace :survey do
-      resources :responses, only: [:show]
-    end
-    resource :slack_uploads, only: [:show]
+  resource :widget, only: [:show]
+  namespace :survey do
+    resources :responses, only: [:show]
   end
+  resource :slack_uploads, only: [:show]
 
   get '/health', to: 'health#show'
   get '/api', to: 'api#index'
@@ -57,36 +38,6 @@ Rails.application.routes.draw do
           resources :agents, only: [:index, :create, :update, :destroy] do
             post :bulk_create, on: :collection
           end
-          namespace :captain do
-            resource :preferences, only: [:show, :update]
-            resources :assistants do
-              member do
-                post :playground
-              end
-              collection do
-                get :tools
-              end
-              resources :inboxes, only: [:index, :create, :destroy], param: :inbox_id
-              resources :scenarios
-            end
-            resources :assistant_responses
-            resources :bulk_actions, only: [:create]
-            resources :copilot_threads, only: [:index, :create] do
-              resources :copilot_messages, only: [:index, :create]
-            end
-            resources :custom_tools do
-              post :test, on: :collection
-            end
-            resources :documents, only: [:index, :show, :create, :destroy]
-            resource :tasks, only: [], controller: 'tasks' do
-              post :rewrite
-              post :summarize
-              post :reply_suggestion
-              post :label_suggestion
-              post :follow_up
-            end
-          end
-          resource :saml_settings, only: [:show, :create, :update, :destroy]
           resources :agent_bots, only: [:index, :create, :show, :update, :destroy] do
             delete :avatar, on: :member
             post :reset_access_token, on: :member
@@ -98,7 +49,6 @@ Rails.application.routes.draw do
             end
           end
           resources :assignable_agents, only: [:index]
-          resource :audit_logs, only: [:show]
           resources :callbacks, only: [] do
             collection do
               post :register_facebook_page
@@ -157,7 +107,6 @@ Rails.application.routes.draw do
               post :unread
               post :custom_attributes
               get :attachments
-              get :inbox_assistant
               get :reporting_events if ChatwootApp.enterprise?
             end
           end
@@ -231,9 +180,7 @@ Rails.application.routes.draw do
               end
             end
 
-            resource :csat_template, only: [:show, :create], controller: 'inbox_csat_templates' do
-              post :analyze, on: :collection
-            end
+            resource :csat_template, only: [:show, :create], controller: 'inbox_csat_templates'
           end
 
           resources :inbox_members, only: [:create, :show], param: :inbox_id do
@@ -373,9 +320,6 @@ Rails.application.routes.draw do
         resources :webhooks, only: [:create]
       end
 
-      # Frontend API endpoint to trigger SAML authentication flow
-      post 'auth/saml_login', to: 'auth#saml_login'
-
       resource :profile, only: [:show, :update] do
         delete :avatar, on: :collection
         member do
@@ -482,14 +426,12 @@ Rails.application.routes.draw do
               post :subscription
               get :limits
               post :toggle_deletion
-              post :topup_checkout
             end
           end
         end
       end
 
       post 'webhooks/stripe', to: 'webhooks/stripe#process_payload'
-      post 'webhooks/firecrawl', to: 'webhooks/firecrawl#process_payload'
     end
   end
 

@@ -55,11 +55,9 @@ class Inbox < ApplicationRecord
   validate :ensure_valid_max_assignment_limit
 
   belongs_to :account
-  belongs_to :portal, optional: true
 
   belongs_to :channel, polymorphic: true, dependent: :destroy
 
-  has_many :campaigns, dependent: :destroy_async
   has_many :contact_inboxes, dependent: :destroy_async
   has_many :contacts, through: :contact_inboxes
 
@@ -68,8 +66,6 @@ class Inbox < ApplicationRecord
   has_many :conversations, dependent: :destroy_async
   has_many :messages, dependent: :destroy_async
 
-  has_one :inbox_assignment_policy, dependent: :destroy
-  has_one :assignment_policy, through: :inbox_assignment_policy
   has_one :agent_bot_inbox, dependent: :destroy_async
   has_one :agent_bot, through: :agent_bot_inbox
   has_many :webhooks, dependent: :destroy_async
@@ -247,5 +243,4 @@ class Inbox < ApplicationRecord
 end
 
 Inbox.prepend_mod_with('Inbox')
-Inbox.include_mod_with('Audit::Inbox')
 Inbox.include_mod_with('Concerns::Inbox')

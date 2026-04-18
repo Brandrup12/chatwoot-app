@@ -176,34 +176,12 @@ gem 'lograge', '~> 0.14.0', require: false
 # worked with microsoft refresh token
 gem 'omniauth-oauth2'
 
-gem 'audited', '~> 5.4', '>= 5.4.1'
-
 # need for google auth
 gem 'omniauth', '>= 2.1.2'
-gem 'omniauth-saml'
 gem 'omniauth-google-oauth2', '>= 1.1.3'
 gem 'omniauth-rails_csrf_protection', '~> 1.0', '>= 1.0.2'
 
-## Gems for reponse bot
-# adds cosine similarity to postgres using vector extension
-gem 'neighbor'
-gem 'pgvector'
-# Convert Website HTML to Markdown
-gem 'reverse_markdown'
-
 gem 'iso-639'
-gem 'ruby-openai'
-gem 'ai-agents', '>= 0.9.1'
-
-# TODO: Move this gem as a dependency of ai-agents
-gem 'ruby_llm', '>= 1.8.2'
-gem 'ruby_llm-schema'
-
-gem 'cld3', '~> 3.7'
-
-# OpenTelemetry for LLM observability
-gem 'opentelemetry-sdk'
-gem 'opentelemetry-exporter-otlp'
 
 gem 'shopify_api'
 

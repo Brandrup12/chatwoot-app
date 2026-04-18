@@ -18,18 +18,16 @@ class Avatar::AvatarFromUrlJob < ApplicationJob
 
     return unless should_sync_avatar?(avatarable, avatar_url)
 
-    avatar_file = Down.download(avatar_url, max_size: MAX_DOWNLOAD_SIZE)
-    raise Down::Error, 'Invalid file' unless valid_file?(avatar_file)
-
-    avatarable.avatar.attach(
-      io: avatar_file,
-      filename: avatar_file.original_filename,
-      content_type: avatar_file.content_type
-    )
-
-  rescue Down::NotFound
-    Rails.logger.info "AvatarFromUrlJob: avatar not found at #{avatar_url}"
-  rescue Down::Error => e
+    SafeFetch.fetch(avatar_url, max_bytes: MAX_DOWNLOAD_SIZE, allowed_content_type_prefixes: ['image/']) do |result|
+      avatarable.avatar.attach(
+        io: result.tempfile,
+        filename: result.filename,
+        content_type: result.content_type
+      )
+    end
+  rescue SafeFetch::HttpError => e
+    Rails.logger.info "AvatarFromUrlJob: could not fetch avatar at #{avatar_url}: #{e.message}"
+  rescue SafeFetch::Error => e
     Rails.logger.error "AvatarFromUrlJob error for #{avatar_url}: #{e.class} - #{e.message}"
   ensure
     update_avatar_sync_attributes(avatarable, avatar_url)
@@ -76,11 +74,5 @@ class Avatar::AvatarFromUrlJob < ApplicationJob
 
     # Persist without triggering validations that may fail due to avatar file checks
     avatarable.update_columns(additional_attributes: additional_attributes) # rubocop:disable Rails/SkipsModelValidations
-  end
-
-  def valid_file?(file)
-    return false if file.original_filename.blank?
-
-    true
   end
 end

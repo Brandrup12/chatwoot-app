@@ -218,7 +218,7 @@ class Message < ApplicationRecord
     return false unless human_response? && !private?
     return false if conversation.first_reply_created_at.present?
     return false if conversation.messages.outgoing
-                                .where.not(sender_type: ['AgentBot', 'Captain::Assistant'])
+                                .where.not(sender_type: 'AgentBot')
                                 .where.not(private: true)
                                 .where("(additional_attributes->'campaign_id') is null").count > 1
 
@@ -259,21 +259,6 @@ class Message < ApplicationRecord
 
   def search_data
     Messages::SearchDataPresenter.new(self).search_data
-  end
-
-  # Returns message content suitable for LLM consumption
-  # Falls back to audio transcription or attachment placeholder when content is nil
-  def content_for_llm
-    return content if content.present?
-
-    audio_transcription = attachments
-                          .where(file_type: :audio)
-                          .filter_map { |att| att.meta&.dig('transcribed_text') }
-                          .join(' ')
-                          .presence
-    return "[Voice Message] #{audio_transcription}" if audio_transcription.present?
-
-    '[Attachment]' if attachments.any?
   end
 
   private
@@ -317,7 +302,6 @@ class Message < ApplicationRecord
   def execute_after_create_commit_callbacks
     # rails issue with order of active record callbacks being executed https://github.com/rails/rails/issues/20911
     reopen_conversation
-    mark_pending_conversation_as_open_for_human_response
     set_conversation_activity
     dispatch_create_events
     send_reply
@@ -364,8 +348,7 @@ class Message < ApplicationRecord
   end
 
   def bot_response?
-    # Check if this is a response from AgentBot or Captain::Assistant
-    outgoing? && sender_type.in?(['AgentBot', 'Captain::Assistant'])
+    outgoing? && sender_type == 'AgentBot'
   end
 
   def dispatch_create_events
@@ -400,18 +383,6 @@ class Message < ApplicationRecord
     conversation.open! if conversation.snoozed?
 
     reopen_resolved_conversation if conversation.resolved?
-  end
-
-  def mark_pending_conversation_as_open_for_human_response
-    return unless captain_pending_conversation?
-    return unless human_response?
-    return if private?
-
-    conversation.open!
-  end
-
-  def captain_pending_conversation?
-    false
   end
 
   def reopen_resolved_conversation
