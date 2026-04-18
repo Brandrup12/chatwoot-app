@@ -20,7 +20,6 @@ class MessageTemplates::HookExecutionService
   end
 
   def should_send_out_of_office_message?
-    return false if conversation.campaign.present?
     # should not send if its a tweet message
     return false if conversation.tweet?
     # should not send for outbound messages
@@ -37,7 +36,6 @@ class MessageTemplates::HookExecutionService
   end
 
   def should_send_greeting?
-    return false if conversation.campaign.present?
     # should not send if its a tweet message
     return false if conversation.tweet?
 
@@ -50,7 +48,6 @@ class MessageTemplates::HookExecutionService
 
   # TODO: we should be able to reduce this logic once we have a toggle for email collect messages
   def should_send_email_collect?
-    return false if conversation.campaign.present?
 
     !contact_has_email? && inbox.web_widget? && !email_collect_was_sent?
   end

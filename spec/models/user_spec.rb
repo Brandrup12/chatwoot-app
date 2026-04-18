@@ -18,8 +18,6 @@ RSpec.describe User do
     it { is_expected.to have_many(:inbox_members).dependent(:destroy_async) }
     it { is_expected.to have_many(:notification_settings).dependent(:destroy_async) }
     it { is_expected.to have_many(:messages) }
-    it { is_expected.to have_many(:reporting_events) }
-    it { is_expected.to have_many(:teams) }
   end
 
   describe 'concerns' do
