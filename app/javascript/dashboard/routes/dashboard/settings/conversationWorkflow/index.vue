@@ -6,19 +6,11 @@ import { FEATURE_FLAGS } from '../../../../featureFlags';
 import BaseSettingsHeader from '../components/BaseSettingsHeader.vue';
 import SettingsLayout from '../SettingsLayout.vue';
 import ConversationRequiredAttributes from 'dashboard/components-next/ConversationWorkflow/ConversationRequiredAttributes.vue';
-import AutoResolve from 'dashboard/routes/dashboard/settings/account/components/AutoResolve.vue';
 
 const { accountId } = useAccount();
 const isFeatureEnabledonAccount = useMapGetter(
   'accounts/isFeatureEnabledonAccount'
 );
-
-const showAutoResolutionConfig = computed(() => {
-  return isFeatureEnabledonAccount.value(
-    accountId.value,
-    FEATURE_FLAGS.AUTO_RESOLVE_CONVERSATIONS
-  );
-});
 
 const showRequiredAttributes = computed(() => {
   return isFeatureEnabledonAccount.value(
@@ -40,7 +32,6 @@ const showRequiredAttributes = computed(() => {
 
     <template #body>
       <div class="flex flex-col gap-6 mt-4">
-        <AutoResolve v-if="showAutoResolutionConfig" />
         <ConversationRequiredAttributes :is-enabled="showRequiredAttributes" />
       </div>
     </template>

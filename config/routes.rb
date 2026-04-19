@@ -10,7 +10,10 @@ Rails.application.routes.draw do
 
   post 'resend_confirmation', to: 'auth/resend_confirmations#create'
 
-  root to: 'api#index'
+  root to: 'dashboard#index'
+
+  get '/app', to: 'dashboard#index'
+  get '/app/*params', to: 'dashboard#index'
 
   resource :widget, only: [:show]
   namespace :survey do

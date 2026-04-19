@@ -1,8 +1,7 @@
 <script setup>
 import { ref } from 'vue';
 import CopilotEditor from 'dashboard/components/widgets/WootWriter/CopilotEditor.vue';
-import CaptainLoader from 'dashboard/components/widgets/conversation/copilot/CaptainLoader.vue';
-
+import { h } from 'vue';
 defineProps({
   showCopilotEditor: {
     type: Boolean,
@@ -29,6 +28,8 @@ const emit = defineEmits([
   'contentReady',
   'send',
 ]);
+
+const CaptainLoader = { render: () => h('div') };
 
 const copilotEditorContent = ref('');
 

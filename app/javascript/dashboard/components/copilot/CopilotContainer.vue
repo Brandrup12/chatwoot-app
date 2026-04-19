@@ -122,11 +122,7 @@ const sendMessage = async message => {
   }
 };
 
-onMounted(() => {
-  if (isEnterprise) {
-    store.dispatch('captainAssistants/get');
-  }
-});
+onMounted(() => {});
 </script>
 
 <template>

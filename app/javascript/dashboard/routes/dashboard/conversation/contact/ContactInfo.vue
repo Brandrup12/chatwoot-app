@@ -15,7 +15,8 @@ import ContactMergeModal from 'dashboard/modules/contact/ContactMergeModal.vue';
 import ComposeConversation from 'dashboard/components-next/NewConversation/ComposeConversation.vue';
 import { BUS_EVENTS } from 'shared/constants/busEvents';
 import NextButton from 'dashboard/components-next/button/Button.vue';
-import VoiceCallButton from 'dashboard/components-next/Contacts/VoiceCallButton.vue';
+import { h } from 'vue';
+const VoiceCallButton = { render: () => h('div') };
 import InlineInput from 'dashboard/components-next/inline-input/InlineInput.vue';
 
 import {

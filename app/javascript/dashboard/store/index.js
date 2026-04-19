@@ -2,18 +2,10 @@ import { createStore } from 'vuex';
 
 import accounts from './modules/accounts';
 import agentBots from './modules/agentBots';
-import agentCapacityPolicies from './modules/agentCapacityPolicies';
 import agents from './modules/agents';
-import assignmentPolicies from './modules/assignmentPolicies';
-import articles from './modules/helpCenterArticles';
 import attributes from './modules/attributes';
-import auditlogs from './modules/auditlogs';
 import auth from './modules/auth';
-import automations from './modules/automations';
 import bulkActions from './modules/bulkActions';
-import campaigns from './modules/campaigns';
-import cannedResponse from './modules/cannedResponse';
-import categories from './modules/helpCenterCategories';
 import contactConversations from './modules/contactConversations';
 import contactLabels from './modules/contactLabels';
 import contactNotes from './modules/contactNotes';
@@ -37,27 +29,11 @@ import inboxes from './modules/inboxes';
 import inboxMembers from './modules/inboxMembers';
 import integrations from './modules/integrations';
 import labels from './modules/labels';
-import macros from './modules/macros';
 import notifications from './modules/notifications';
-import portals from './modules/helpCenterPortals';
 import reports from './modules/reports';
-import sla from './modules/sla';
-import slaReports from './modules/SLAReports';
 import summaryReports from './modules/summaryReports';
-import teamMembers from './modules/teamMembers';
-import teams from './modules/teams';
 import userNotificationSettings from './modules/userNotificationSettings';
 import webhooks from './modules/webhooks';
-import captainAssistants from './captain/assistant';
-import captainDocuments from './captain/document';
-import captainResponses from './captain/response';
-import captainInboxes from './captain/inboxes';
-import captainBulkActions from './captain/bulkActions';
-import copilotThreads from './captain/copilotThreads';
-import copilotMessages from './captain/copilotMessages';
-import captainScenarios from './captain/scenarios';
-import captainTools from './captain/tools';
-import captainCustomTools from './captain/customTools';
 
 const plugins = [];
 
@@ -65,18 +41,10 @@ export default createStore({
   modules: {
     accounts,
     agentBots,
-    agentCapacityPolicies,
     agents,
-    assignmentPolicies,
-    articles,
     attributes,
-    auditlogs,
     auth,
-    automations,
     bulkActions,
-    campaigns,
-    cannedResponse,
-    categories,
     contactConversations,
     contactLabels,
     contactNotes,
@@ -100,27 +68,11 @@ export default createStore({
     inboxMembers,
     integrations,
     labels,
-    macros,
     notifications,
-    portals,
     reports,
-    sla,
-    slaReports,
     summaryReports,
-    teamMembers,
-    teams,
     userNotificationSettings,
     webhooks,
-    captainAssistants,
-    captainDocuments,
-    captainResponses,
-    captainInboxes,
-    captainBulkActions,
-    copilotThreads,
-    copilotMessages,
-    captainScenarios,
-    captainTools,
-    captainCustomTools,
   },
   plugins,
 });

@@ -73,7 +73,6 @@ export default {
   },
   mounted() {
     this.fetchLabels();
-    this.$store.dispatch('dashboardApps/get');
   },
   methods: {
     fetchLabels() {

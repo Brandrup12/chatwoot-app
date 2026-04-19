@@ -10,7 +10,7 @@ import { useRouter } from 'vue-router';
 import { useStore } from 'dashboard/composables/store';
 import WootSnackbarBox from './components/SnackbarContainer.vue';
 import { setColorTheme } from './helper/themeHelper';
-import { isOnOnboardingView } from 'v3/helpers/RouteHelper';
+const isOnOnboardingView = route => route?.name === 'onboarding';
 import { useAccount } from 'dashboard/composables/useAccount';
 import { useFontSize } from 'dashboard/composables/useFontSize';
 import {

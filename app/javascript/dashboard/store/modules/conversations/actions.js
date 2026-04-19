@@ -13,10 +13,8 @@ import {
 import messageReadActions from './actions/messageReadActions';
 import messageTranslateActions from './actions/messageTranslateActions';
 import * as Sentry from '@sentry/vue';
-import {
-  handleVoiceCallCreated,
-  handleVoiceCallUpdated,
-} from 'dashboard/helper/voice';
+const handleVoiceCallCreated = () => {};
+const handleVoiceCallUpdated = () => {};
 
 export const hasMessageFailedWithExternalError = pendingMessage => {
   // This helper is used to check if the message has failed with an external error.

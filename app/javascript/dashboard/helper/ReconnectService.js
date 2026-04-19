@@ -99,13 +99,10 @@ class ReconnectService {
   };
 
   revalidateCaches = async () => {
-    const { label, inbox, team } = await this.store.dispatch(
-      'accounts/getCacheKeys'
-    );
+    const { label, inbox } = await this.store.dispatch('accounts/getCacheKeys');
     await Promise.all([
       this.store.dispatch('labels/revalidate', { newKey: label }),
       this.store.dispatch('inboxes/revalidate', { newKey: inbox }),
-      this.store.dispatch('teams/revalidate', { newKey: team }),
     ]);
   };
 

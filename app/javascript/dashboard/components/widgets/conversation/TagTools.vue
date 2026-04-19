@@ -1,17 +1,16 @@
 <script setup>
 import { ref, computed, watch } from 'vue';
-import ToolsDropdown from 'dashboard/components-next/captain/assistant/ToolsDropdown.vue';
-import { useKeyboardNavigableList } from 'dashboard/composables/useKeyboardNavigableList';
-import { useMapGetter } from 'dashboard/composables/store.js';
-
+import { h } from 'vue';
 const props = defineProps({
   searchKey: {
     type: String,
     default: '',
   },
 });
-
 const emit = defineEmits(['selectTool']);
+const ToolsDropdown = { render: () => h('div') };
+import { useKeyboardNavigableList } from 'dashboard/composables/useKeyboardNavigableList';
+import { useMapGetter } from 'dashboard/composables/store.js';
 
 const tools = useMapGetter('captainTools/getRecords');
 

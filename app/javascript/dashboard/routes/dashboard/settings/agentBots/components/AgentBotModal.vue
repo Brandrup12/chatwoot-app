@@ -13,8 +13,7 @@ import NextButton from 'dashboard/components-next/button/Button.vue';
 import Input from 'dashboard/components-next/input/Input.vue';
 import TextArea from 'dashboard/components-next/textarea/TextArea.vue';
 import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
-import AccessToken from 'dashboard/routes/dashboard/settings/profile/AccessToken.vue';
-
+import { h } from 'vue';
 const props = defineProps({
   type: {
     type: String,
@@ -26,6 +25,8 @@ const props = defineProps({
     default: () => ({}),
   },
 });
+
+const AccessToken = { render: () => h('div') };
 
 const MODAL_TYPES = {
   CREATE: 'create',

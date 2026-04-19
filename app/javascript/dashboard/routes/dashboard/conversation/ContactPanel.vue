@@ -18,12 +18,10 @@ import ContactNotes from './contact/ContactNotes.vue';
 import ConversationInfo from './ConversationInfo.vue';
 import CustomAttributes from './customAttributes/CustomAttributes.vue';
 import Draggable from 'vuedraggable';
-import MacrosList from './Macros/List.vue';
 import ShopifyOrdersList from 'dashboard/components/widgets/conversation/ShopifyOrdersList.vue';
 import SidebarActionsHeader from 'dashboard/components-next/SidebarActionsHeader.vue';
-import LinearIssuesList from 'dashboard/components/widgets/conversation/linear/IssuesList.vue';
-import LinearSetupCTA from 'dashboard/components/widgets/conversation/linear/LinearSetupCTA.vue';
 
+import { h } from 'vue';
 const props = defineProps({
   conversationId: {
     type: [Number, String],
@@ -34,6 +32,9 @@ const props = defineProps({
     default: undefined,
   },
 });
+const MacrosList = { render: () => h('div') };
+const LinearIssuesList = { render: () => h('div') };
+const LinearSetupCTA = { render: () => h('div') };
 
 const {
   updateUISettings,

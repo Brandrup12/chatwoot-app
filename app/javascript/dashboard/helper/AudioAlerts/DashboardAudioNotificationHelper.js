@@ -2,7 +2,11 @@ import { MESSAGE_TYPE } from 'shared/constants/messages';
 import { showBadgeOnFavicon } from './faviconHelper';
 import { initFaviconSwitcher } from './faviconHelper';
 
-import { EVENT_TYPES } from 'dashboard/routes/dashboard/settings/profile/constants.js';
+const EVENT_TYPES = {
+  ASSIGNED: 'assigned',
+  UNASSIGNED: 'unassigned',
+  NOTME: 'notme',
+};
 import GlobalStore from 'dashboard/store';
 import AudioNotificationStore from './AudioNotificationStore';
 import {

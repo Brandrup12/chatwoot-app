@@ -35,11 +35,12 @@ import InstagramStoryBubble from './bubbles/InstagramStory.vue';
 import EmailBubble from './bubbles/Email/Index.vue';
 import UnsupportedBubble from './bubbles/Unsupported.vue';
 import ContactBubble from './bubbles/Contact.vue';
-import DyteBubble from './bubbles/Dyte.vue';
+import { h } from 'vue';
+const DyteBubble = { render: () => h('div') };
 import LocationBubble from './bubbles/Location.vue';
 import CSATBubble from './bubbles/CSAT.vue';
 import FormBubble from './bubbles/Form.vue';
-import VoiceCallBubble from './bubbles/VoiceCall.vue';
+const VoiceCallBubble = { render: () => h('div') };
 
 import MessageError from './MessageError.vue';
 import ContextMenu from 'dashboard/modules/conversations/components/MessageContextMenu.vue';

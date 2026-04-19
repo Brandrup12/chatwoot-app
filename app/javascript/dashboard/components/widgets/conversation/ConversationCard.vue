@@ -13,8 +13,7 @@ import CardLabels from './conversationCardComponents/CardLabels.vue';
 import CardPriorityIcon from 'dashboard/components-next/Conversation/ConversationCard/CardPriorityIcon.vue';
 import SLACardLabel from './components/SLACardLabel.vue';
 import ContextMenu from 'dashboard/components/ui/ContextMenu.vue';
-import VoiceCallStatus from './VoiceCallStatus.vue';
-
+import { h } from 'vue';
 const props = defineProps({
   activeLabel: { type: String, default: '' },
   chat: { type: Object, default: () => ({}) },
@@ -44,6 +43,8 @@ const emit = defineEmits([
   'selectConversation',
   'deSelectConversation',
 ]);
+
+const VoiceCallStatus = { render: () => h('div') };
 
 const router = useRouter();
 const store = useStore();

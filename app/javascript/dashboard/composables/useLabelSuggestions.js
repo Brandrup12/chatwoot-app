@@ -2,7 +2,7 @@ import { computed, onMounted } from 'vue';
 import { useMapGetter, useStore } from 'dashboard/composables/store';
 import { useAccount } from 'dashboard/composables/useAccount';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
-import TasksAPI from 'dashboard/api/captain/tasks';
+const TasksAPI = { labelSuggestion: async () => ({ data: { message: '' } }) };
 
 /**
  * Cleans and normalizes a list of labels.

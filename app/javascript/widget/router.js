@@ -11,11 +11,6 @@ const router = createRouter({
       component: () => import('./views/UnreadMessages.vue'),
     },
     {
-      path: '/campaigns',
-      name: 'campaigns',
-      component: () => import('./views/Campaigns.vue'),
-    },
-    {
       path: '/',
       component: ViewWithHeader,
       children: [
@@ -33,11 +28,6 @@ const router = createRouter({
           path: '/messages',
           name: 'messages',
           component: () => import('./views/Messages.vue'),
-        },
-        {
-          path: '/article',
-          name: 'article-viewer',
-          component: () => import('./views/ArticleViewer.vue'),
         },
       ],
     },

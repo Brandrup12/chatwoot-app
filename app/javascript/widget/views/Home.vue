@@ -3,11 +3,9 @@ import TeamAvailability from 'widget/components/TeamAvailability.vue';
 import { mapGetters } from 'vuex';
 import { useRouter } from 'vue-router';
 import configMixin from 'widget/mixins/configMixin';
-import ArticleContainer from '../components/pageComponents/Home/Article/ArticleContainer.vue';
 export default {
   name: 'Home',
   components: {
-    ArticleContainer,
     TeamAvailability,
   },
   mixins: [configMixin],
@@ -41,7 +39,5 @@ export default {
       :unread-count="unreadMessageCount"
       @start-conversation="startConversation"
     />
-
-    <ArticleContainer />
   </div>
 </template>

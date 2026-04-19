@@ -16,15 +16,12 @@ const CommandBar = defineAsyncComponent(
   () => import('./commands/commandbar.vue')
 );
 
-const FloatingCallWidget = defineAsyncComponent(
-  () => import('dashboard/components/widgets/FloatingCallWidget.vue')
-);
-
 import CopilotLauncher from 'dashboard/components-next/copilot/CopilotLauncher.vue';
 import CopilotContainer from 'dashboard/components/copilot/CopilotContainer.vue';
 
 import MobileSidebarLauncher from 'dashboard/components-next/sidebar/MobileSidebarLauncher.vue';
-import { useCallsStore } from 'dashboard/stores/calls';
+
+const useCallsStore = () => ({ hasActiveCall: false, hasIncomingCall: false });
 
 export default {
   components: {
@@ -35,7 +32,6 @@ export default {
     UpgradePage,
     CopilotLauncher,
     CopilotContainer,
-    FloatingCallWidget,
     MobileSidebarLauncher,
   },
   setup() {
@@ -162,7 +158,6 @@ export default {
           @toggle="toggleMobileSidebar"
         />
         <CopilotContainer />
-        <FloatingCallWidget v-if="hasActiveCall || hasIncomingCall" />
       </template>
       <AddAccountModal
         :show="showCreateAccountModal"

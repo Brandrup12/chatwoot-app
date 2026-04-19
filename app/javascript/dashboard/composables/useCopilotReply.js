@@ -3,10 +3,15 @@ import { useCaptain } from 'dashboard/composables/useCaptain';
 import { useUISettings } from 'dashboard/composables/useUISettings';
 import { useTrack } from 'dashboard/composables';
 import { CAPTAIN_EVENTS } from 'dashboard/helper/AnalyticsHelper/events';
-import {
-  CAPTAIN_ERROR_TYPES,
-  CAPTAIN_GENERATION_FAILURE_REASONS,
-} from 'dashboard/composables/captain/constants';
+const CAPTAIN_ERROR_TYPES = {
+  ABORTED: 'aborted',
+  ABORT_ERROR: 'AbortError',
+  CANCELED_ERROR: 'CanceledError',
+};
+const CAPTAIN_GENERATION_FAILURE_REASONS = {
+  EMPTY_RESPONSE: 'empty_response',
+  EXCEPTION: 'exception',
+};
 
 // Actions that map to REWRITE events (with operation attribute)
 const REWRITE_ACTIONS = [
