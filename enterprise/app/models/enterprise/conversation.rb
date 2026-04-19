@@ -1,6 +1,6 @@
 module Enterprise::Conversation
   def list_of_keys
-    super + %w[sla_policy_id]
+    super
   end
 
   # Include select additional_attributes keys (call related) for update events

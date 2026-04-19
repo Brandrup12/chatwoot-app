@@ -22,13 +22,10 @@
 #  account_id             :integer          not null
 #  assignee_agent_bot_id  :bigint
 #  assignee_id            :integer
-#  campaign_id            :bigint
 #  contact_id             :bigint
 #  contact_inbox_id       :bigint
 #  display_id             :integer          not null
 #  inbox_id               :integer          not null
-#  sla_policy_id          :bigint
-#  team_id                :bigint
 #
 # Indexes
 #
@@ -36,7 +33,6 @@
 #  index_conversations_on_account_id                  (account_id)
 #  index_conversations_on_account_id_and_display_id   (account_id,display_id) UNIQUE
 #  index_conversations_on_assignee_id_and_account_id  (assignee_id,account_id)
-#  index_conversations_on_campaign_id                 (campaign_id)
 #  index_conversations_on_contact_id                  (contact_id)
 #  index_conversations_on_contact_inbox_id            (contact_inbox_id)
 #  index_conversations_on_first_reply_created_at      (first_reply_created_at)
@@ -46,7 +42,6 @@
 #  index_conversations_on_priority                    (priority)
 #  index_conversations_on_status_and_account_id       (status,account_id)
 #  index_conversations_on_status_and_priority         (status,priority)
-#  index_conversations_on_team_id                     (team_id)
 #  index_conversations_on_uuid                        (uuid) UNIQUE
 #  index_conversations_on_waiting_since               (waiting_since)
 #
@@ -265,7 +260,7 @@ class Conversation < ApplicationRecord
   end
 
   def list_of_keys
-    %w[team_id assignee_id assignee_agent_bot_id status snoozed_until custom_attributes label_list waiting_since
+    %w[assignee_id assignee_agent_bot_id status snoozed_until custom_attributes label_list waiting_since
        first_reply_created_at priority]
   end
 
