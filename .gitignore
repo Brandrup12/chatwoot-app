@@ -22,6 +22,10 @@
 .byebug_history
 .DS_Store
 *.log
+
+# macOS iCloud sync-conflict duplicates ("foo 2.rb", "foo 3.vue", etc.)
+* [0-9].*
+* [0-9]
 # Ignore application configuration
 node_modules
 master.key
