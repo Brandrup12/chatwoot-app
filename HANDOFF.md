@@ -10,7 +10,8 @@ Chatwoot is being converted into a **headless channel gateway** feeding HelpCore
 
 - **Phase A** ✅ done 2026-04-21 — Chatwoot → HelpCore webhook, smoke-tested green.
 - **Phase B** ✅ code done 2026-04-21 — HelpCore → Chatwoot reply client, locally proven. Prod activation blocked on one env var (see below).
-- **Phase C** — HelpCore Settings UI that drives Chatwoot via its REST API. Not started.
+- **Phase C.1** ✅ code done 2026-04-21 — HelpCore Settings UI → Chatwoot webhook CRUD. Replaces the manual `bundle exec rails runner Webhook.create!...` step. Prod activation blocked on the same `CHATWOOT_API_URL` env var as Phase B.
+- **Phase C.2/C.3** — Inboxes list/create + channel configuration (WhatsApp / IG / FB / Telegram). Not started.
 - **Phase D** — Delete the Chatwoot Vue dashboard once Phase C covers it. Not started.
 
 Delete this file when Phase D lands.
@@ -19,17 +20,18 @@ Delete this file when Phase D lands.
 
 Pick one:
 
-1. **Activate Phase B in prod.** Expose local Chatwoot to the internet (`cloudflared tunnel --url http://localhost:3000` or ngrok) and set `CHATWOOT_API_URL=https://<tunnel-url>` on the HelpCore Railway service. That's the only thing gating the full round trip — everything else is already live.
-2. **Start Phase C.** Build a HelpCore (Next.js + Shadcn) settings UI that creates inboxes / configures channels / manages webhook subscriptions by calling Chatwoot's REST API. 2–4 days.
-3. **Deploy Chatwoot to Railway.** Bigger lift (Rails web + Sidekiq + Postgres + Redis) but needed eventually so Phase C / prod traffic isn't dev-host-dependent.
+1. **Activate Phase B + C.1 in prod.** Expose local Chatwoot to the internet (`cloudflared tunnel --url http://localhost:3000` or ngrok) and set `CHATWOOT_API_URL=https://<tunnel-url>` on the HelpCore Railway service. Same var unlocks both the reply client (Phase B) and the Settings → Chatwoot tab (Phase C.1).
+2. **Continue Phase C (C.2 / C.3).** Extend the Settings tab with Inboxes list/create and channel-specific configuration (WhatsApp / IG / FB / Telegram). Pattern is already set — add `listChatwootInboxes` / `createChatwootInbox` in `integrations/chatwoot.ts`, matching routes in `routes/chatwoot.ts`, new subsection in the Chatwoot tab.
+3. **Deploy Chatwoot to Railway.** Bigger lift (Rails web + Sidekiq + Postgres + Redis) but needed eventually so prod traffic isn't dev-host-dependent.
 
-Recommend (1) first — fastest way to prove the full round trip end-to-end — then (2).
+Recommend (1) first — fastest validation that the whole loop works — then (2).
 
 ## Current state — HelpCore (`~/HelpCore-CS-Tool`, `main`)
 
 Railway auto-deploys. Latest relevant commits:
 
-- `33f0357` — Phase B: Chatwoot reply client + orchestrator + route branch. Files: `server/src/integrations/chatwoot.ts`, `server/src/engine/chatwoot-reply-sender.ts`, `server/src/routes/tickets.ts` (POST `/:id/messages` branches on `chatwoot_conversation_id`), `scripts/test-chatwoot-reply.ts`.
+- `c7b6d80` — Phase C.1: Chatwoot webhook CRUD in Settings UI. Extends `server/src/integrations/chatwoot.ts` with `listChatwootWebhooks` / `createChatwootWebhook` / `deleteChatwootWebhook` and a shared `chatwootRequest` helper; new `server/src/routes/chatwoot.ts` (`GET|POST|DELETE /api/chatwoot/webhooks`); `api.chatwoot.webhooks.*` in `client/src/lib/api.ts`; new "Chatwoot" tab in `client/src/app/settings/page.tsx`.
+- `33f0357` — Phase B: Chatwoot reply client + orchestrator + route branch. Files: `server/src/engine/chatwoot-reply-sender.ts`, `server/src/routes/tickets.ts` (POST `/:id/messages` branches on `chatwoot_conversation_id`), `scripts/test-chatwoot-reply.ts`.
 - `15a3010` — Phase A: schema columns, migration, webhook handler. Files: `shared/schema.ts` (adds `chatwoot_conversation_id` + `chatwoot_account_id` to `helpcore.tickets`, indexed), `migrations/manual_2026-04-20_chatwoot_gateway_correlation.sql` (applied to Railway Postgres), `server/src/webhooks/chatwoot.ts`, `server/src/webhooks/index.ts` (route mounted at `/api/webhooks/chatwoot`).
 
 Railway env on HelpCore-CS-Tool service:
@@ -70,6 +72,8 @@ Phase A (Chatwoot → HelpCore) — all four handled events verified against Rai
 | `message_created` (×2) | Both customer messages appended to the same ticket — no duplicate ticket |
 | `conversation_status_changed` (resolved) | `status=closed`, `resolved_at` populated |
 
+Phase C.1 (webhook CRUD) — tsx exercised `listChatwootWebhooks` / `createChatwootWebhook` / `deleteChatwootWebhook` against local Chatwoot: created a dummy webhook, listed 2 total, deleted, listed 1 (the real Webhook #1) remaining. API-layer plumbing works; the UI is latent on Railway until `CHATWOOT_API_URL` is set.
+
 Phase B (HelpCore → Chatwoot) — orchestrator run against local Chatwoot:
 
 ```
@@ -104,4 +108,4 @@ Posts Chatwoot Message #7 into Conversation #1 with `type=outgoing`, `sender=Use
 
 Paste this into your next Claude session to get started:
 
-> Read `~/Documents/GITHUB/chatwoot-app/HANDOFF.md`. Resume from "How to resume tomorrow" — recommend starting with option 1 (tunnel Chatwoot + set `CHATWOOT_API_URL` to activate Phase B in prod), then option 2 (start Phase C — HelpCore Settings UI). HelpCore repo is at `~/HelpCore-CS-Tool`.
+> Read `~/Documents/GITHUB/chatwoot-app/HANDOFF.md`. Resume from "How to resume tomorrow" — option 1 (tunnel Chatwoot + set `CHATWOOT_API_URL` to activate Phase B + the Settings → Chatwoot tab in prod) or option 2 (continue Phase C.2/C.3 — Inboxes + channel config). HelpCore repo is at `~/HelpCore-CS-Tool`.
