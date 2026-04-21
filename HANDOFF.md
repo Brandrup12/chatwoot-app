@@ -6,7 +6,7 @@
 
 Read this file first when a new session opens on this repo.
 
-**Phase A is done.** Smoke test proven end-to-end against Railway HelpCore on 2026-04-21 (see "Phase A smoke-test results" below). Next session: Phase B — HelpCore → Chatwoot reply API client.
+**Phase A + Phase B code are done.** Phase A's smoke test is green end-to-end. Phase B (HelpCore → Chatwoot reply client) is implemented and unit-verified against local Chatwoot; the full Railway → local Chatwoot HTTP round trip is blocked until Chatwoot is reachable from Railway (tunnel or deploy). Next session: either tunnel Chatwoot to activate Phase B in prod, or start Phase C (HelpCore Settings UI).
 
 ---
 
@@ -72,6 +72,46 @@ All four handled events verified end-to-end against Railway HelpCore, using the 
 
 The original HANDOFF said the endpoint was `/api/webhooks/chatwoot` — but `server/src/index.ts` mounts `webhookRouter` at `/api/webhooks`, not `/webhooks`. All URLs in this doc are now `/api/webhooks/chatwoot`, matching the live route. The Chatwoot Webhook record was updated accordingly.
 
+## Phase B — HelpCore → Chatwoot agent reply (2026-04-21)
+
+Phase B ships the outbound side: when an agent replies in HelpCore to a ticket that was mirrored from Chatwoot (`chatwoot_conversation_id` populated), the reply is POSTed back into the Chatwoot conversation so the customer sees it in whatever channel they used.
+
+### What's on HelpCore `main` (commit `33f0357`)
+
+- `server/src/integrations/chatwoot.ts` — thin Application API client calling `POST /api/v1/accounts/:id/conversations/:id/messages` with an `api_access_token` header. Structured `ChatwootClientError`.
+- `server/src/engine/chatwoot-reply-sender.ts` — orchestrator that loads the ticket, prefers the ticket's `chatwoot_account_id` over the env default, and falls back to an HTML-stripped `body_text` when only HTML is available.
+- `server/src/routes/tickets.ts` — `POST /:id/messages` now branches: if the ticket has a `chatwoot_conversation_id`, the reply goes through the Chatwoot client; otherwise it stays on the existing email sender (`sendTicketReply`). Forwards always go via email (new recipient, not the customer).
+- `scripts/test-chatwoot-reply.ts` — one-shot `tsx` verifier for the orchestrator end-to-end.
+
+### What's on Railway (HelpCore service)
+
+Code is deployed (commit `33f0357`). Env vars:
+
+- ✅ `CHATWOOT_API_ACCESS_TOKEN` — set (user access token for `testsub@neurogan.com`).
+- ✅ `CHATWOOT_ACCOUNT_ID` — set to `4` (the "Test" account).
+- ❌ `CHATWOOT_API_URL` — **intentionally unset**. Until Chatwoot is reachable from Railway, we want a clear `CHATWOOT_API_URL not set` error in logs instead of a latent ECONNREFUSED against `localhost:3000`. The agent's reply is still written to HelpCore's `messages` table — it just doesn't get delivered to Chatwoot.
+
+### What was proven locally
+
+```
+CHATWOOT_API_URL=http://localhost:3000 \
+CHATWOOT_API_ACCESS_TOKEN=... \
+CHATWOOT_ACCOUNT_ID=4 \
+DATABASE_URL="<Railway public proxy>" \
+npx tsx scripts/test-chatwoot-reply.ts <ticket-uuid> "<msg>"
+```
+
+Result: `[chatwoot-reply] Ticket aa959a18… → Chatwoot conv 1, msg 7`. In Chatwoot DB, Message #7 has `type=outgoing`, `conv=1`, `sender=User 4`, and the content matches.
+
+### To activate Phase B in prod
+
+Pick one:
+
+1. **Tunnel local Chatwoot** — `cloudflared tunnel --url http://localhost:3000` (or ngrok), then set `CHATWOOT_API_URL=https://<tunnel-url>` on Railway. Fast for validating end-to-end but dev-host-dependent.
+2. **Deploy Chatwoot to Railway** — bigger lift (separate Railway project or service, Postgres + Redis + Sidekiq worker). Needed eventually for Phase C (when HelpCore UI calls Chatwoot directly).
+
+Either way, the ONLY thing that changes is setting `CHATWOOT_API_URL` on Railway. No code edits needed.
+
 ### Known minor issue
 
 `chatwoot_account_id` remains NULL on the test ticket. Chatwoot's conversation-level payload doesn't expose `account_id` at the top level; the webhook handler currently reads it from `payload.account_id` (absent) instead of `payload.messages[0].account_id` or `payload.inbox.account_id`. Not blocking for Phase A (we only have one Chatwoot account), worth fixing when we touch the handler again.
@@ -101,7 +141,7 @@ The original HANDOFF said the endpoint was `/api/webhooks/chatwoot` — but `ser
 ## Full phase roadmap (for context)
 
 - **Phase A** ✅ done (2026-04-21): Chatwoot → HelpCore webhook shipped, migration applied, env vars set, smoke test green.
-- **Phase B**: HelpCore → Chatwoot reply API client. ~1 day. Creates `server/src/integrations/chatwoot.ts` in HelpCore with a client that calls `POST /api/v1/accounts/:id/conversations/:id/messages`.
+- **Phase B** ✅ code done (2026-04-21): HelpCore → Chatwoot reply client shipped, env vars set except `CHATWOOT_API_URL` (awaiting Chatwoot tunnel/deploy). Local round-trip proven.
 - **Phase C**: HelpCore Settings UI (create inbox, configure WhatsApp/IG channels, manage webhook subs). 2–4 days. Built with Next.js + Shadcn + calls Chatwoot's REST API.
 - **Phase D**: Delete Chatwoot's Vue dashboard, v3 bundle, `/app` routes. Chatwoot fully headless. Few hours.
 
@@ -113,4 +153,4 @@ When Phase D lands, delete this handoff file.
 
 Paste this into your next Claude session to get started:
 
-> Read `~/Documents/GITHUB/chatwoot-app/HANDOFF.md`. Phase A is done. Start Phase B: build the HelpCore → Chatwoot reply API client (`server/src/integrations/chatwoot.ts` in HelpCore) so that an agent reply in HelpCore posts back into the Chatwoot conversation. HelpCore repo is at `~/HelpCore-CS-Tool`.
+> Read `~/Documents/GITHUB/chatwoot-app/HANDOFF.md`. Phases A and B are done in code. Either (a) tunnel local Chatwoot so Railway HelpCore can reach it and set `CHATWOOT_API_URL` to activate Phase B in prod, or (b) start Phase C — build HelpCore Settings UI for creating inboxes / configuring channels / managing webhook subs by calling Chatwoot's REST API. HelpCore repo is at `~/HelpCore-CS-Tool`.
