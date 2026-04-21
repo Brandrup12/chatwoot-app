@@ -1,6 +1,6 @@
 # HANDOFF — Next session pickup
 
-**Last updated:** 2026-04-21 (evening). Author: Claude (Opus 4.7).
+**Last updated:** 2026-04-21. Author: Claude (Opus 4.7).
 **Branch:** `helpcore-strip-wip` (pushed to `origin`).
 **Strategic plan:** see `/Users/nicklasbrandrup/.claude/plans/i-have-a-broader-deep-pebble.md`.
 
