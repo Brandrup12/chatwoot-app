@@ -1,10 +1,12 @@
 # HANDOFF — Next session pickup
 
-**Last updated:** 2026-04-20. Author: Claude (Opus 4.7).
+**Last updated:** 2026-04-21. Author: Claude (Opus 4.7).
 **Branch:** `helpcore-strip-wip` (pushed to `origin`).
 **Strategic plan:** see `/Users/nicklasbrandrup/.claude/plans/i-have-a-broader-deep-pebble.md`.
 
 Read this file first when a new session opens on this repo.
+
+**Phase A is done.** Smoke test proven end-to-end against Railway HelpCore on 2026-04-21 (see "Phase A smoke-test results" below). Next session: Phase B — HelpCore → Chatwoot reply API client.
 
 ---
 
@@ -34,8 +36,8 @@ On HelpCore's `main` branch, commit `15a3010` — Railway auto-deploys:
 
 - `shared/schema.ts` — added `chatwoot_conversation_id` + `chatwoot_account_id` to `helpcore.tickets`, indexed by conversation id.
 - `migrations/manual_2026-04-20_chatwoot_gateway_correlation.sql` — idempotent additive migration. **Not yet applied to prod.**
-- `server/src/webhooks/chatwoot.ts` — webhook handler covering `conversation_created`, `message_created`, `conversation_updated`, `conversation_status_changed` (see note below). Auth via optional `?token=` query param or `X-Chatwoot-Signature` HMAC. Brand resolves from `CHATWOOT_DEFAULT_BRAND_SLUG` (falls back to first brand).
-- `server/src/webhooks/index.ts` — wired `/webhooks/chatwoot`.
+- `server/src/api/webhooks/chatwoot.ts` — webhook handler covering `conversation_created`, `message_created`, `conversation_updated`, `conversation_status_changed` (see note below). Auth via optional `?token=` query param or `X-Chatwoot-Signature` HMAC. Brand resolves from `CHATWOOT_DEFAULT_BRAND_SLUG` (falls back to first brand).
+- `server/src/webhooks/index.ts` — wired `/api/webhooks/chatwoot`.
 
 ### Correction vs. the previous handoff
 
@@ -46,79 +48,33 @@ The previous HANDOFF listed `conversation_resolved` as an event. **Chatwoot has 
 Seeded via `bundle exec rails runner` (not committed — Chatwoot dev DB state):
 
 - `Webhook #1` on `Account.first` (account_id=4, "Test"), subscribed to `conversation_created`, `message_created`, `conversation_updated`, `conversation_status_changed`.
-- URL: `https://helpcore-cs-tool-production.up.railway.app/webhooks/chatwoot?token=<secret>`.
+- URL: `https://helpcore-cs-tool-production.up.railway.app/api/webhooks/chatwoot?token=<secret>`.
 - Shared secret stashed at `/tmp/chatwoot-webhook-secret.txt` on the dev machine. **Move it to 1Password / Railway before the secret rotates off `/tmp`.**
 
-## What's left to finish Phase A
+## Phase A smoke-test results (2026-04-21)
 
-These are **prod-side operations** you need to run (I did not run them — prod-affecting).
+All four handled events verified end-to-end against Railway HelpCore, using the real `Conversation #1` from the `HelpCore Web Widget (Phase A smoke test)` inbox (`website_token=pEdt5uTdatwtAVFRenEmHRQg`):
 
-### 1. Apply the migration against Railway HelpCore
+| Event fired | HelpCore result |
+|---|---|
+| `conversation_created` | Ticket `aa959a18…` inserted, `channel_source=chat_widget`, `brand_id=neurogan_cbd`, `chatwoot_conversation_id=1`, `status=new` |
+| `message_created` ("Hey!") | Customer message row attached to the ticket |
+| `message_created` ("Looks good!") | Second customer message appended to the same ticket — no duplicate ticket |
+| `conversation_status_changed` (resolved) | Ticket `status=closed`, `resolved_at` populated |
 
-```bash
-cd ~/HelpCore-CS-Tool
-# Pull DATABASE_URL from Railway (either via dashboard or `railway variables`)
-DATABASE_URL="postgresql://..." psql "$DATABASE_URL" \
-  -f migrations/manual_2026-04-20_chatwoot_gateway_correlation.sql
-```
+### What shipped to prod this session
 
-The file is idempotent (uses `ADD COLUMN IF NOT EXISTS` + `CREATE INDEX IF NOT EXISTS`), so re-running is safe.
+- Migration applied against Railway Postgres (cols + `idx_tickets_chatwoot_conversation` confirmed).
+- `CHATWOOT_WEBHOOK_SECRET` and `CHATWOOT_DEFAULT_BRAND_SLUG=neurogan_cbd` set on the HelpCore Railway service; the service redeployed picking them up.
+- Chatwoot's Webhook #1 updated to the **correct path** (see correction below).
 
-### 2. Set env vars on Railway HelpCore
+### Correction #2: webhook router mount path
 
-In the Railway dashboard (or via `railway variables set`):
+The original HANDOFF said the endpoint was `/api/webhooks/chatwoot` — but `server/src/index.ts` mounts `webhookRouter` at `/api/webhooks`, not `/webhooks`. All URLs in this doc are now `/api/webhooks/chatwoot`, matching the live route. The Chatwoot Webhook record was updated accordingly.
 
-- `CHATWOOT_WEBHOOK_SECRET` — copy from `/tmp/chatwoot-webhook-secret.txt` (value: `384f0738e22a81654beb2700a85fc72d380267f7c6070158`).
-- `CHATWOOT_DEFAULT_BRAND_SLUG` — pick one of the existing brand slugs (e.g. `neurogan_cbd`). Tickets created from Chatwoot will be attributed to that brand until we add per-inbox mapping.
+### Known minor issue
 
-Redeploy once set (Railway may auto-redeploy on env change depending on config).
-
-### 3. Create a web widget inbox in Chatwoot and capture the token
-
-Via the Vue UI at `http://localhost:3000/app` — log in as `testsub@neurogan.com` / `Complex123!`, go to **Settings → Inboxes → Add Inbox → Website**. Set a name + website domain. After creation, note the `websiteToken` from the inbox settings or:
-
-```bash
-eval "$(rbenv init -)" && cd ~/Documents/GITHUB/chatwoot-app
-bundle exec rails runner 'puts Channel::WebWidget.last.website_token'
-```
-
-### 4. Smoke test
-
-Open the widget preview:
-
-```
-http://localhost:3000/widget?website_token=<token>
-```
-
-Send a test message as a "customer". Then in a separate shell watch the Sidekiq log to confirm the `WebhookJob` fires:
-
-```bash
-tail -f /tmp/overmind.log | grep -i webhook
-```
-
-And in the HelpCore Railway DB:
-
-```sql
-SELECT id, brand_id, channel_source, status, chatwoot_conversation_id, chatwoot_account_id, created_at
-FROM helpcore.tickets
-WHERE chatwoot_conversation_id IS NOT NULL
-ORDER BY created_at DESC LIMIT 5;
-
-SELECT ticketId, sender_type, body_text, created_at
-FROM helpcore.messages
-WHERE ticket_id = '<the ticket id above>'
-ORDER BY created_at;
-```
-
-If there's a ticket row + at least one customer message row, Phase A is done. Commit in both repos (Chatwoot side only needs this HANDOFF update — the dev-DB webhook record isn't tracked in source).
-
-### If the smoke test fails
-
-- **WebhookJob never fires** — check `Webhook.all.pluck(:id, :url, :subscriptions)` in Chatwoot rails console; verify URL matches `helpcore-cs-tool-production.up.railway.app` and subscriptions include `conversation_created` + `message_created`.
-- **401 from HelpCore** — confirm `CHATWOOT_WEBHOOK_SECRET` in Railway matches `/tmp/chatwoot-webhook-secret.txt` exactly.
-- **404 from HelpCore** — the Railway deploy may not have completed. Watch `railway logs` until you see the new build.
-- **500 from HelpCore** — tail Railway logs, look for `[Chatwoot Webhook]` entries.
-- **Ticket created but no message** — Chatwoot may fire `message_created` before `conversation_created` if timing is weird; the handler logs "unknown conv" and bails. Next message on the same conv will land correctly. (Rare.)
+`chatwoot_account_id` remains NULL on the test ticket. Chatwoot's conversation-level payload doesn't expose `account_id` at the top level; the webhook handler currently reads it from `payload.account_id` (absent) instead of `payload.messages[0].account_id` or `payload.inbox.account_id`. Not blocking for Phase A (we only have one Chatwoot account), worth fixing when we touch the handler again.
 
 ## What NOT to do
 
@@ -144,7 +100,7 @@ If there's a ticket row + at least one customer message row, Phase A is done. Co
 
 ## Full phase roadmap (for context)
 
-- **Phase A** ✅ code shipped / ⏳ prod migration + smoke test pending: Chatwoot → HelpCore webhook. 2–4 hrs.
+- **Phase A** ✅ done (2026-04-21): Chatwoot → HelpCore webhook shipped, migration applied, env vars set, smoke test green.
 - **Phase B**: HelpCore → Chatwoot reply API client. ~1 day. Creates `server/src/integrations/chatwoot.ts` in HelpCore with a client that calls `POST /api/v1/accounts/:id/conversations/:id/messages`.
 - **Phase C**: HelpCore Settings UI (create inbox, configure WhatsApp/IG channels, manage webhook subs). 2–4 days. Built with Next.js + Shadcn + calls Chatwoot's REST API.
 - **Phase D**: Delete Chatwoot's Vue dashboard, v3 bundle, `/app` routes. Chatwoot fully headless. Few hours.
@@ -157,4 +113,4 @@ When Phase D lands, delete this handoff file.
 
 Paste this into your next Claude session to get started:
 
-> Read `~/Documents/GITHUB/chatwoot-app/HANDOFF.md`. Phase A code is shipped; apply the migration + set the Railway env vars listed under "What's left to finish Phase A", then run the smoke test. HelpCore repo is at `~/HelpCore-CS-Tool`.
+> Read `~/Documents/GITHUB/chatwoot-app/HANDOFF.md`. Phase A is done. Start Phase B: build the HelpCore → Chatwoot reply API client (`server/src/integrations/chatwoot.ts` in HelpCore) so that an agent reply in HelpCore posts back into the Chatwoot conversation. HelpCore repo is at `~/HelpCore-CS-Tool`.
