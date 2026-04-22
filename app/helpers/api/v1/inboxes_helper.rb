@@ -1,6 +1,11 @@
 module Api::V1::InboxesHelper
   def inbox_name(channel)
-    return channel.try(:bot_name) if channel.is_a?(Channel::Telegram)
+    # Channel::Telegram was dropped during the HelpCore strip (commit d75d239c3);
+    # the constant no longer resolves, so the original `is_a?(Channel::Telegram)`
+    # guard raises NameError on every inbox create. Detect by channel_type
+    # string instead so we can still honour the Telegram bot_name override if
+    # the channel model is ever restored.
+    return channel.try(:bot_name) if channel.respond_to?(:channel_type) && channel.channel_type == 'Channel::Telegram'
 
     permitted_params[:name]
   end
@@ -96,14 +101,15 @@ module Api::V1::InboxesHelper
   end
 
   def account_channels_method
+    # Line / Telegram / SMS channels were dropped during the HelpCore strip
+    # (commit d75d239c3). Evaluating their associations on Account would raise
+    # NoMethodError even when creating an unrelated channel, so they're gone
+    # from this lookup. Restore them here if those models come back.
     {
       'web_widget' => Current.account.web_widgets,
       'api' => Current.account.api_channels,
       'email' => Current.account.email_channels,
-      'line' => Current.account.line_channels,
-      'telegram' => Current.account.telegram_channels,
-      'whatsapp' => Current.account.whatsapp_channels,
-      'sms' => Current.account.sms_channels
+      'whatsapp' => Current.account.whatsapp_channels
     }[permitted_params[:channel][:type]]
   end
 

@@ -170,14 +170,15 @@ class Api::V1::Accounts::InboxesController < Api::V1::Accounts::BaseController
   end
 
   def channel_type_from_params
+    # Line / Telegram / SMS channels were dropped during the HelpCore strip
+    # (commit d75d239c3). The constants no longer exist, so even eager
+    # evaluation of the hash raised NameError. Matches account_channels_method
+    # in app/helpers/api/v1/inboxes_helper.rb.
     {
       'web_widget' => Channel::WebWidget,
       'api' => Channel::Api,
       'email' => Channel::Email,
-      'line' => Channel::Line,
-      'telegram' => Channel::Telegram,
-      'whatsapp' => Channel::Whatsapp,
-      'sms' => Channel::Sms
+      'whatsapp' => Channel::Whatsapp
     }[permitted_params[:channel][:type]]
   end
 
