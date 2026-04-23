@@ -11,8 +11,8 @@ Chatwoot is being converted into a **headless channel gateway** feeding HelpCore
 - **Phase A** ✅ done 2026-04-21 — Chatwoot → HelpCore webhook, smoke-tested green.
 - **Phase B** ✅ code done 2026-04-21 — HelpCore → Chatwoot reply client, locally proven. Prod activation blocked on one env var (see below).
 - **Phase C.1** ✅ code done 2026-04-21 — HelpCore Settings UI → Chatwoot webhook CRUD.
-- **Phase C.2** ✅ code done 2026-04-22 — HelpCore Settings UI → Chatwoot inbox list/create (web widget only) / delete. Also fixed three stale `Channel::Line`/`Channel::Telegram`/`Channel::Sms` references in stripped Chatwoot that were 500-ing `POST /api/v1/accounts/:id/inboxes`.
-- **Phase C.3** — Channel-specific configuration (WhatsApp / FB / IG / Email-IMAP). Not started.
+- **Phase C.2** ✅ code done 2026-04-22 — HelpCore Settings UI → Chatwoot inbox list/create (web widget) / delete. Also fixed three stale `Channel::Line`/`Channel::Telegram`/`Channel::Sms` references in stripped Chatwoot that were 500-ing `POST /api/v1/accounts/:id/inboxes`.
+- **Phase C.3** ✅ code done 2026-04-22 — WhatsApp Cloud inbox form (phone + Meta credentials). FB / IG / Email-IMAP intentionally skipped: FB/IG need OAuth flows, Email-IMAP would duplicate HelpCore's Gmail/Graph pipeline.
 - **Phase D** — Delete the Chatwoot Vue dashboard once Phase C covers it. Not started.
 
 Delete this file when Phase D lands.
@@ -21,16 +21,18 @@ Delete this file when Phase D lands.
 
 Pick one:
 
-1. **Activate Phase B + C.1 + C.2 in prod.** Expose local Chatwoot to the internet (`cloudflared tunnel --url http://localhost:3000` or ngrok) and set `CHATWOOT_API_URL=https://<tunnel-url>` on the HelpCore Railway service. Same var unlocks the reply client (Phase B) and both Settings → Chatwoot tab subsections (webhooks + inboxes).
-2. **Phase C.3 — channel-specific configuration.** Extend the Settings tab with configuration flows for WhatsApp Cloud API, Facebook Page, Instagram Direct, and Email/IMAP. Each needs its own creator helper (Chatwoot's `channel.type` accepts `api` / `email` / `whatsapp` after our strip; `facebook` and `instagram` go through separate OAuth-backed controllers — research before implementing).
-3. **Deploy Chatwoot to Railway.** Bigger lift (Rails web + Sidekiq + Postgres + Redis) but needed eventually so prod traffic isn't dev-host-dependent.
+1. **Activate Phase B + C.1 + C.2 + C.3 in prod.** Expose local Chatwoot to the internet (`cloudflared tunnel --url http://localhost:3000` or ngrok) and set `CHATWOOT_API_URL=https://<tunnel-url>` on the HelpCore Railway service. Same var unlocks every HelpCore → Chatwoot direction we've built.
+2. **Start Phase D** — delete Chatwoot's Vue dashboard now that Settings UI covers webhook + inbox management. Audit which `/app` routes are still used vs. obsolete and strip the ones we don't need. See "Phase D readiness" below.
+3. **Remaining C.3 channels** — Facebook Page + Instagram Direct (OAuth flows) and Email-IMAP (redundant with HelpCore's Gmail/Graph, skip unless a new brand lands on a non-Google mailbox). Separate OAuth controller work per channel.
+4. **Deploy Chatwoot to Railway.** Needed eventually so prod traffic isn't dev-host-dependent; currently everything Chatwoot-side runs only on the laptop.
 
-Recommend (1) first — fastest validation that the whole loop works — then (2).
+Recommend (1) first — fastest validation that the whole loop works — then either (2) or (4).
 
 ## Current state — HelpCore (`~/HelpCore-CS-Tool`, `main`)
 
 Railway auto-deploys. Latest relevant commits:
 
+- `c81bd43` — Phase C.3: Chatwoot WhatsApp Cloud inbox form. Adds `createChatwootWhatsappInbox` + `CHATWOOT_WHATSAPP_PROVIDERS`; POST `/api/chatwoot/inboxes` now branches on `channel.type` (`web_widget` vs. `whatsapp`), validates phone-number format / provider enum / `whatsapp_cloud` creds server-side; new `api.chatwoot.inboxes.createWhatsappCloud`; new `WhatsappInboxForm` in the Chatwoot settings tab (password-masked API key, warning that creds are round-tripped against Meta at create time).
 - `546f567` — Phase C.2: Chatwoot inbox CRUD in Settings UI. Extends `integrations/chatwoot.ts` with `listChatwootInboxes` / `createChatwootWebWidgetInbox` / `deleteChatwootInbox`; new `GET|POST|DELETE /api/chatwoot/inboxes` routes; `api.chatwoot.inboxes.*` in the client; new Inboxes section rendered above Webhooks in the Chatwoot settings tab.
 - `c7b6d80` — Phase C.1: Chatwoot webhook CRUD in Settings UI. Extends `server/src/integrations/chatwoot.ts` with `listChatwootWebhooks` / `createChatwootWebhook` / `deleteChatwootWebhook` and a shared `chatwootRequest` helper; new `server/src/routes/chatwoot.ts` (`GET|POST|DELETE /api/chatwoot/webhooks`); `api.chatwoot.webhooks.*` in `client/src/lib/api.ts`; new "Chatwoot" tab in `client/src/app/settings/page.tsx`.
 - `33f0357` — Phase B: Chatwoot reply client + orchestrator + route branch. Files: `server/src/engine/chatwoot-reply-sender.ts`, `server/src/routes/tickets.ts` (POST `/:id/messages` branches on `chatwoot_conversation_id`), `scripts/test-chatwoot-reply.ts`.
@@ -76,6 +78,8 @@ Phase A (Chatwoot → HelpCore) — all four handled events verified against Rai
 | `message_created` (×2) | Both customer messages appended to the same ticket — no duplicate ticket |
 | `conversation_status_changed` (resolved) | `status=closed`, `resolved_at` populated |
 
+Phase C.3 (WhatsApp inbox) — tsx exercised `createChatwootWhatsappInbox` with dummy `whatsapp_cloud` credentials. Chatwoot's `validate_provider_config` hook round-tripped them against Meta and returned **422 "Provider config Invalid Credentials"** — the exact failure signature we want. Payload shape is correct; live Meta credentials will succeed without further code changes.
+
 Phase C.2 (inbox CRUD) — tsx exercised `listChatwootInboxes` / `createChatwootWebWidgetInbox` / `deleteChatwootInbox` against local Chatwoot: listed 1 before, created inbox #3 "Phase C.2 verifier" (got back a `website_token`), listed 2 after create, fired delete (Sidekiq async-destroys in the background). Integration layer works; UI is latent on Railway until `CHATWOOT_API_URL` is set.
 
 Phase C.1 (webhook CRUD) — tsx exercised `listChatwootWebhooks` / `createChatwootWebhook` / `deleteChatwootWebhook` against local Chatwoot: created a dummy webhook, listed 2 total, deleted, listed 1 (the real Webhook #1) remaining. API-layer plumbing works; the UI is latent on Railway until `CHATWOOT_API_URL` is set.
@@ -100,6 +104,15 @@ Posts Chatwoot Message #7 into Conversation #1 with `type=outgoing`, `sender=Use
 - Don't restore stripped features (teams, SLA, captain, etc.). They live in HelpCore if needed.
 - Don't subscribe Chatwoot webhooks to `conversation_resolved` — **it doesn't exist.** `Webhook::ALLOWED_WEBHOOK_EVENTS` only allows: `conversation_status_changed`, `conversation_updated`, `conversation_created`, `contact_created`, `contact_updated`, `message_created`, `message_updated`, `webwidget_triggered`, `inbox_created`, `inbox_updated`, `conversation_typing_on`, `conversation_typing_off`. Our handler covers resolution via `conversation_updated` + `conversation_status_changed` (both map `resolved` → HelpCore `closed`, idempotent).
 
+## Phase D readiness
+
+With C.1 + C.2 + C.3 shipped, HelpCore's Settings → Chatwoot tab covers webhook CRUD, web-widget inbox CRUD, and WhatsApp Cloud inbox creation. That's the ops surface we actually use today. Before deleting Vue pages in Phase D:
+
+- Audit `/app/accounts/:id/settings/inboxes/*` and `/app/accounts/:id/settings/webhooks/*` vs. what the HelpCore Settings tab covers.
+- Preserve anything HelpCore UI doesn't yet own: agents, teams (if revived), custom attributes, canned responses (if we keep them), profile.
+- The Vue dashboard also houses the **widget preview page** (`/widget?website_token=...`) — that's a separate concern from `/app/*`, keep it.
+- Don't remove Rails routes that the Application API uses internally (controllers under `/api/v1/accounts/:id/*`). Phase D is purely a Vue/V3 bundle strip.
+
 ## Deferred / known issues
 
 - **`chatwoot_account_id` is NULL on existing test ticket.** The webhook handler reads `payload.account_id`, but Chatwoot only exposes account id per-message (`payload.messages[0].account_id`) or via `payload.inbox.account_id`. Not blocking — we only have one Chatwoot account and the env fallback handles it — but worth fixing when the webhook is touched again.
@@ -114,4 +127,4 @@ Posts Chatwoot Message #7 into Conversation #1 with `type=outgoing`, `sender=Use
 
 Paste this into your next Claude session to get started:
 
-> Read `~/Documents/GITHUB/chatwoot-app/HANDOFF.md`. Resume from "How to resume tomorrow" — option 1 (tunnel Chatwoot + set `CHATWOOT_API_URL` to activate Phase B + C.1 + C.2 in prod) or option 2 (Phase C.3 — channel-specific configuration: WhatsApp / FB / IG / Email-IMAP). HelpCore repo is at `~/HelpCore-CS-Tool`.
+> Read `~/Documents/GITHUB/chatwoot-app/HANDOFF.md`. Resume from "How to resume tomorrow" — option 1 (tunnel Chatwoot + set `CHATWOOT_API_URL` to activate Phases B/C.1/C.2/C.3 in prod) or option 2 (start Phase D — audit the Vue dashboard and strip the pages HelpCore's Settings tab now covers). HelpCore repo is at `~/HelpCore-CS-Tool`.
