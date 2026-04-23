@@ -150,3 +150,9 @@ COPY --from=pre-builder /app/.git_sha /app/.git_sha
 WORKDIR /app
 
 EXPOSE 3000
+
+# Default CMD targets the web role (Rails). The worker service on Railway
+# overrides this via RAILWAY_RUN_COMMAND. db:chatwoot_prepare is intentionally
+# NOT run here — it's a one-shot, run via `railway run` against chatwoot-web
+# after first deploy, or via a pre-deploy command on the service.
+CMD ["sh", "-c", "bundle exec rails server -b 0.0.0.0 -p ${PORT:-3000} -e ${RAILS_ENV:-production}"]
