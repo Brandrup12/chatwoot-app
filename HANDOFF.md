@@ -1,6 +1,6 @@
 # HANDOFF — Next session pickup
 
-**Last updated:** 2026-04-22. Author: Claude (Opus 4.7).
+**Last updated:** 2026-04-22 (late, post-Phase-D). Author: Claude (Opus 4.7).
 **Branch:** `helpcore-strip-wip` (pushed to `origin`).
 **Strategic plan:** see `/Users/nicklasbrandrup/.claude/plans/i-have-a-broader-deep-pebble.md`.
 
@@ -9,24 +9,57 @@
 Chatwoot is being converted into a **headless channel gateway** feeding HelpCore-CS-Tool (`~/HelpCore-CS-Tool`). Chatwoot receives messages (webchat / WhatsApp / IG / FB / Telegram / Line / Twilio SMS), webhooks them to HelpCore as tickets, and accepts agent replies back via its REST API.
 
 - **Phase A** ✅ done 2026-04-21 — Chatwoot → HelpCore webhook, smoke-tested green.
-- **Phase B** ✅ code done 2026-04-21 — HelpCore → Chatwoot reply client, locally proven. Prod activation blocked on one env var (see below).
-- **Phase C.1** ✅ code done 2026-04-21 — HelpCore Settings UI → Chatwoot webhook CRUD.
-- **Phase C.2** ✅ code done 2026-04-22 — HelpCore Settings UI → Chatwoot inbox list/create (web widget) / delete. Also fixed three stale `Channel::Line`/`Channel::Telegram`/`Channel::Sms` references in stripped Chatwoot that were 500-ing `POST /api/v1/accounts/:id/inboxes`.
-- **Phase C.3** ✅ code done 2026-04-22 — WhatsApp Cloud inbox form (phone + Meta credentials). FB / IG / Email-IMAP intentionally skipped: FB/IG need OAuth flows, Email-IMAP would duplicate HelpCore's Gmail/Graph pipeline.
+- **Phase B** ✅ done 2026-04-22 — HelpCore → Chatwoot reply client. `CHATWOOT_API_URL` now set on Railway via the cloudflared tunnel (stage 1 of the finish plan).
+- **Phase C.1** ✅ done 2026-04-22 — HelpCore Settings UI → Chatwoot webhook CRUD, live via the tunnel.
+- **Phase C.2** ✅ done 2026-04-22 — HelpCore Settings UI → Chatwoot inbox CRUD (web widget), live via the tunnel. Also fixed three stale `Channel::Line`/`Channel::Telegram`/`Channel::Sms` references in stripped Chatwoot.
+- **Phase C.3** ✅ done 2026-04-22 — WhatsApp Cloud inbox form (phone + Meta credentials). FB / IG / Email-IMAP intentionally skipped.
+- **Phase D** ✅ done 2026-04-22 (commit `6fe4642a0`) — Vue admin dashboard stripped; 3,479 files deleted. Chatwoot is now truly headless. GET / now serves the health probe, GET /app 404s, Application API + widget still 200.
 - **Phase D** — Delete the Chatwoot Vue dashboard once Phase C covers it. Not started.
 
 Delete this file when Phase D lands.
 
-## How to resume tomorrow
+## State as of this save
 
-Pick one:
+**Working loop (tunnel-based):** a cloudflared tunnel is running on the dev laptop (PID visible with `ps aux | grep cloudflared`) exposing `http://localhost:3000` at `https://reception-sensitivity-rain-kilometers.trycloudflare.com`. Railway HelpCore's `CHATWOOT_API_URL` points at that tunnel. HelpCore Settings → Chatwoot tab now lists the real webhooks + inboxes, and agent replies on Chatwoot-originated tickets flow back through.
 
-1. **Activate Phase B + C.1 + C.2 + C.3 in prod.** Expose local Chatwoot to the internet (`cloudflared tunnel --url http://localhost:3000` or ngrok) and set `CHATWOOT_API_URL=https://<tunnel-url>` on the HelpCore Railway service. Same var unlocks every HelpCore → Chatwoot direction we've built.
-2. **Start Phase D** — delete Chatwoot's Vue dashboard now that Settings UI covers webhook + inbox management. Audit which `/app` routes are still used vs. obsolete and strip the ones we don't need. See "Phase D readiness" below.
-3. **Remaining C.3 channels** — Facebook Page + Instagram Direct (OAuth flows) and Email-IMAP (redundant with HelpCore's Gmail/Graph, skip unless a new brand lands on a non-Google mailbox). Separate OAuth controller work per channel.
-4. **Deploy Chatwoot to Railway.** Needed eventually so prod traffic isn't dev-host-dependent; currently everything Chatwoot-side runs only on the laptop.
+**Known limitation:** if the laptop closes, the tunnel dies and HelpCore → Chatwoot breaks (inbound webhooks still work, since those are Chatwoot → HelpCore). Fixing that is the remaining task (stage 3 of the finish plan, see below).
 
-Recommend (1) first — fastest validation that the whole loop works — then either (2) or (4).
+## How to finish — one remaining step
+
+**Stage 3 blocker (needs ~5 min of user action, then I can continue):**
+
+Trying to deploy Chatwoot into the HelpCore CS Tool Railway project via `railway add --repo Brandrup12/chatwoot-app` failed with `Unauthorized`. Railway is authenticated as `nicklasbrandrup@hotmail.com` and can see the HelpCore project, but it doesn't have the Railway GitHub App installed on the `Brandrup12` GitHub account where `chatwoot-app` lives.
+
+Resolve one of these two ways, then tell Claude to continue:
+
+1. **Install Railway's GitHub App on Brandrup12** — https://github.com/apps/railway-app → Configure → pick the `Brandrup12` account → Only select repos → `chatwoot-app`. Fastest path.
+2. **Transfer `chatwoot-app` to the `neurogan` GitHub org** where Railway already has access (same place `HelpCore-CS-Tool` lives). Cleaner long-term home for the repo.
+
+Once access is granted, the remaining deploy sequence is scripted below — Claude can execute it without more checkpoints:
+
+```bash
+# From ~/Documents/GITHUB/chatwoot-app (already linked to HelpCore CS Tool project):
+railway add --service chatwoot-web --repo Brandrup12/chatwoot-app
+railway add --service chatwoot-worker --repo Brandrup12/chatwoot-app
+# (Claude will then configure both services' env vars via the Railway MCP:
+#  DATABASE_URL (reference HelpCore's Postgres), REDIS_URL (reference HelpCore's Redis),
+#  SECRET_KEY_BASE (pre-generated, stashed at /tmp/chatwoot-secret-key-base.txt),
+#  FRONTEND_URL=https://<chatwoot-web-railway-url>,
+#  INSTALLATION_NAME="HelpCore Gateway",
+#  per-service start commands: web runs bin/rails server, worker runs bundle exec sidekiq)
+# Then deploy, wait for release phase to run rails db:chatwoot_prepare,
+# then recreate the webhook + web-widget inbox via HelpCore Settings → Chatwoot,
+# and finally set CHATWOOT_API_URL to the new chatwoot-web URL and kill the tunnel.
+```
+
+**Shared Postgres note** (per your guidance): HelpCore uses the `helpcore` schema (`pgSchema("helpcore")` in `shared/schema.ts`), Chatwoot's Rails migrations default to `public` — so they coexist in one database without table collisions. The two stacks will still keep separate customer representations (`helpcore.customers` vs Chatwoot's `public.contacts`); the correlation already happens in the Phase A webhook handler, which upserts a `helpcore.customers` row when a Chatwoot conversation arrives. Sharing the DB saves a Railway plugin; it does NOT mean Chatwoot reuses HelpCore's customer rows.
+
+## Stages already completed
+
+- **Stage 1** ✅ Tunnel + Railway `CHATWOOT_API_URL` + Settings tab now live.
+- **Stage 2** ✅ Vue admin dashboard stripped (commit `6fe4642a0`).
+- **Stage 3** ⏳ Blocked on Railway ↔ GitHub access for `Brandrup12/chatwoot-app`.
+- **Stage 4** ⏳ Cleanup (delete this file, tag release commit) — happens after stage 3 lands.
 
 ## Current state — HelpCore (`~/HelpCore-CS-Tool`, `main`)
 
