@@ -1,8 +1,10 @@
 # One-time bootstrap: creates the first admin account and logs the API token.
 # Gated on BOOTSTRAP_ADMIN_EMAIL env var — remove this file and the env var after first boot.
-return unless ENV['BOOTSTRAP_ADMIN_EMAIL'].present? && Account.count.zero?
+return unless ENV['BOOTSTRAP_ADMIN_EMAIL'].present?
 
 Rails.application.config.after_initialize do
+  next unless Account.count.zero?
+
   begin
     email    = ENV['BOOTSTRAP_ADMIN_EMAIL']
     password = ENV.fetch('BOOTSTRAP_ADMIN_PASSWORD', 'ChangeMe2026!')
