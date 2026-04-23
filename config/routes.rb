@@ -10,10 +10,10 @@ Rails.application.routes.draw do
 
   post 'resend_confirmation', to: 'auth/resend_confirmations#create'
 
-  root to: 'dashboard#index'
-
-  get '/app', to: 'dashboard#index'
-  get '/app/*params', to: 'dashboard#index'
+  # Phase D: Vue dashboard removed. Chatwoot is headless — admin UX lives in
+  # HelpCore's Settings → Chatwoot tab. The root + /app routes that used to
+  # render the dashboard SPA are gone. HTTP root is now just a health probe.
+  root to: 'health#show'
 
   resource :widget, only: [:show]
   namespace :survey do
