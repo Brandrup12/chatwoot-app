@@ -73,14 +73,22 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      // Phase D: dashboard + v3 removed — Chatwoot is headless.
-      // The aliases for `components`, `next`, `v3`, `dashboard`, `assets`
-      // are gone because nothing in widget/ sdk/ survey/ references them.
+      // Phase D removed the dashboard /app route + controller, but the widget /
+      // sdk / survey / shared trees have ~30 imports from dashboard/* sub-dirs
+      // (components-next/, composables/, helper/, constants/, etc). Rather
+      // than rewire every one, we keep the dashboard/ source tree on disk so
+      // those imports resolve — nothing at runtime loads the admin SPA
+      // (no controller, no route, no entrypoint) so it's just unreachable code.
+      // v3/ was a separate SPA with no widget/sdk/survey consumers, stays removed.
       vue: 'vue/dist/vue.esm-bundler.js',
+      components: path.resolve('./app/javascript/dashboard/components'),
+      next: path.resolve('./app/javascript/dashboard/components-next'),
+      dashboard: path.resolve('./app/javascript/dashboard'),
       helpers: path.resolve('./app/javascript/shared/helpers'),
       shared: path.resolve('./app/javascript/shared'),
       survey: path.resolve('./app/javascript/survey'),
       widget: path.resolve('./app/javascript/widget'),
+      assets: path.resolve('./app/javascript/dashboard/assets'),
     },
   },
   test: {
