@@ -154,7 +154,10 @@ WORKDIR /app
 EXPOSE 3000
 
 # Default CMD targets the web role (Rails). The worker service on Railway
-# overrides this via RAILWAY_RUN_COMMAND. db:chatwoot_prepare is intentionally
-# NOT run here — it's a one-shot, run via `railway run` against chatwoot-web
-# after first deploy, or via a pre-deploy command on the service.
-CMD ["sh", "-c", "bundle exec rails server -b 0.0.0.0 -p ${PORT:-3000} -e ${RAILS_ENV:-production}"]
+# overrides this via RAILWAY_RUN_COMMAND.
+#
+# db:chatwoot_prepare is idempotent and cheap on an up-to-date schema
+# (it's a pending-check + migrate + seed), so running it on every web
+# container start is a clean, Railway-friendly alternative to a separate
+# release phase. The worker overrides CMD entirely and skips this.
+CMD ["sh", "-c", "bundle exec rails db:chatwoot_prepare && bundle exec rails server -b 0.0.0.0 -p ${PORT:-3000} -e ${RAILS_ENV:-production}"]
